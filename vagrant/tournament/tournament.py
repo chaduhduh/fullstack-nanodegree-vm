@@ -5,23 +5,59 @@
 
 import psycopg2
 
+def executeQuery(args):
+    """ Excutes a given query on a given DB and returns result """
 
-def connect():
-    """Connect to the PostgreSQL database.  Returns a database connection."""
-    return psycopg2.connect("dbname=tournament")
+    if 'dbname' in args and 'query' in args:
+        connection = connect({ 'dbname' : args['dbname'] })
+        if connection:
+            cursor = connection.cursor()
+            query = args['query']
+            cursor.execute(query)
+            if cursor.rowcount > 0:
+                result = cursor.fetchall()
+            else:
+                result = 0
+            connection.commit()
+            connection.close()
+            return result
+    else:
+        print "invalid query options, no database or query specified"
+
+def connect(args):
+    """Connect to the PostgreSQL database.  Returns sa database connection."""
+
+    if 'dbname' in args:
+        try:
+            connection = psycopg2.connect("dbname=" + args['dbname'])
+            cursor = connection.cursor()
+            return connection
+        except: 
+            print "Connection failed. Make sure the database [" + args['dbname'] + "] exists"
+            return False
+    else:
+        return False    
 
 
 def deleteMatches():
-    """Remove all the match records from the database."""
+    """Remove all the mastch records from the database."""
+
+    query = ("DELETE FROM matches;")
+    results = executeQuery({'dbname': 'tournament', 'query' : query})
 
 
 def deletePlayers():
     """Remove all the player records from the database."""
 
+    query = ("DELETE FROM players;")
+    results = executeQuery({'dbname': 'tournament', 'query' : query})
 
 def countPlayers():
     """Returns the number of players currently registered."""
 
+    query = ("SELECT * FROM players;")
+    results = executeQuery({'dbname': 'tournament', 'query' : query})
+    return results
 
 def registerPlayer(name):
     """Adds a player to the tournament database.
@@ -73,5 +109,3 @@ def swissPairings():
         id2: the second player's unique id
         name2: the second player's name
     """
-
-

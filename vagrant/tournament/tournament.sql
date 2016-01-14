@@ -1,9 +1,29 @@
--- Table definitions for the tournament project.
---
--- Put your SQL 'create table' statements in this file; also 'create view'
--- statements if you choose to use it.
---
--- You can write comments in this file by starting them with two dashes, like
--- these lines here.
+--DB definitions
+
+-- Tournament
+DROP DATABASE IF EXISTS tournament;
+CREATE DATABASE tournament;
+
+\c tournament;
+
+-- Players Schema
+DROP TABLE IF EXISTS players CASCADE;
+CREATE TABLE players(
+   id SERIAL PRIMARY KEY NOT NULL,
+   firstname VARCHAR(50),
+   lastname VARCHAR(50)
+);
+
+-- Matches Schema
+DROP TABLE IF EXISTS matches CASCADE;
+CREATE TABLE matches(
+   id SERIAL PRIMARY KEY NOT NULL,
+   playeroneid BIGINT references players(id),
+   playertwoid BIGINT references players(id),
+   currentstatus VARCHAR(30),
+   winningplayerid BIGINT,
+   losingplayerid BIGINT
+);
+
 
 
