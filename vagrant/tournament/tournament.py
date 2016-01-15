@@ -6,27 +6,51 @@
 import psycopg2
 
 def executeQuery(args):
-    """ Excutes a given query on a given DB and returns result """
+    """ Excutes a given query on a given DB and returns result 
 
-    if 'dbname' in args and 'query' in args:
+        This essentially allows for cleaner functions below and 
+        eliminates redundant code. This could also be used as a
+        wrapper to eliminate certain queries from running. For 
+        example one could remove support for insert type statements.
+    """
+
+    if 'dbname' not in args and 'query' not in args and 'type' not in args:
+        print "invalid executeQuery options"
+    else:
+        querytype = args['type']
         connection = connect({ 'dbname' : args['dbname'] })
         if connection:
             cursor = connection.cursor()
             query = args['query']
-            cursor.execute(query)
-            if cursor.rowcount > 0:
-                result = cursor.fetchall()
-            else:
-                result = 0
+
+            # FIND QUERY
+            if(querytype == 'find'):
+                cursor.execute(query)
+                if cursor.rowcount > 0:
+                    result = cursor.fetchall()
+                else:
+                    result = 0
+
+            # DELETE QUERY
+            if(querytype == 'delete'):
+                cursor.execute(query)
+                result = cursor.rowcount
+
+            # INSERT QUERY
+            if(querytype == 'insert'):
+                if 'values' not in args:
+                    print "no values to insert"
+                else:
+                    cursor.execute("INSERT INTO players (firstname, lastname) VALUES (%s, %s)",args['values'])
+                    result = cursor.rowcount
+
             connection.commit()
+            cursor.close()
             connection.close()
             return result
-    else:
-        print "invalid query options, no database or query specified"
 
 def connect(args):
     """Connect to the PostgreSQL database.  Returns sa database connection."""
-
     if 'dbname' in args:
         try:
             connection = psycopg2.connect("dbname=" + args['dbname'])
@@ -41,33 +65,42 @@ def connect(args):
 
 def deleteMatches():
     """Remove all the mastch records from the database."""
-
     query = ("DELETE FROM matches;")
-    results = executeQuery({'dbname': 'tournament', 'query' : query})
+    results = executeQuery({'dbname': 'tournament', 'query' : query, 'type' : 'delete'})
 
 
 def deletePlayers():
     """Remove all the player records from the database."""
-
     query = ("DELETE FROM players;")
-    results = executeQuery({'dbname': 'tournament', 'query' : query})
+    results = executeQuery({'dbname': 'tournament', 'query' : query, 'type' : 'delete'})
+
 
 def countPlayers():
     """Returns the number of players currently registered."""
+    count = 0
+    query = ("SELECT COUNT(id) FROM players;")
+    results = executeQuery({'dbname': 'tournament', 'query' : query, 'type' : 'find'})
+    for row in results:
+        count = row[0]
+    return count
 
-    query = ("SELECT * FROM players;")
-    results = executeQuery({'dbname': 'tournament', 'query' : query})
-    return results
-
-def registerPlayer(name):
+def registerPlayer(args):
     """Adds a player to the tournament database.
   
     The database assigns a unique serial id number for the player.  (This
     should be handled by your SQL database schema, not in your Python code.)
   
     Args:
-      name: the player's full name (need not be unique).
+      first name: the player's first name (need not be unique).
+      last name: the player's first name (need not be unique).
     """
+    
+    if 'firstname' not in args and 'lastname' not in args:
+        print "Player not registered. Invalid name format. Please use first name and last name"
+    else:
+        query = "INSERT INTO players (firstname, lastname) VALUES (%s, %s)"
+        values = ('chadddd', 'this is new')
+        results = executeQuery({'dbname': 'tournament', 'query' : query, 'type' : 'insert', 'values' : values})
 
 
 def playerStandings():
@@ -109,3 +142,4 @@ def swissPairings():
         id2: the second player's unique id
         name2: the second player's name
     """
+registerPlayer({'firstname' : 'cassandra', 'lastname' : 'mmmhmmm' })
