@@ -11,8 +11,7 @@ CREATE DATABASE tournament;
 DROP TABLE IF EXISTS players CASCADE;
 CREATE TABLE players(
    id SERIAL PRIMARY KEY,
-   firstname VARCHAR(255),
-   lastname VARCHAR(255)
+   name VARCHAR(255)
 );
 
 -- Matches Schema
@@ -25,6 +24,7 @@ CREATE TABLE matches(
    winningplayerid BIGINT,
    losingplayerid BIGINT
 );
+
 
 
 

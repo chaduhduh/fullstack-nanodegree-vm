@@ -25,7 +25,10 @@ def executeQuery(args):
 
             # FIND QUERY
             if(querytype == 'find'):
-                cursor.execute(query)
+                if 'values' not in args:
+                    cursor.execute(query)
+                else:
+                    cursor.execute(query,args['values'])
                 if cursor.rowcount > 0:
                     result = cursor.fetchall()
                 else:
@@ -41,7 +44,7 @@ def executeQuery(args):
                 if 'values' not in args:
                     print "no values to insert"
                 else:
-                    cursor.execute("INSERT INTO players (firstname, lastname) VALUES (%s, %s)",args['values'])
+                    cursor.execute(query,args['values'])
                     result = cursor.rowcount
 
             connection.commit()
@@ -84,7 +87,7 @@ def countPlayers():
         count = row[0]
     return count
 
-def registerPlayer(args):
+def registerPlayer(name):
     """Adds a player to the tournament database.
   
     The database assigns a unique serial id number for the player.  (This
@@ -94,13 +97,17 @@ def registerPlayer(args):
       first name: the player's first name (need not be unique).
       last name: the player's first name (need not be unique).
     """
-    
-    if 'firstname' not in args and 'lastname' not in args:
-        print "Player not registered. Invalid name format. Please use first name and last name"
+    if len(name) < 1:
+        print "Player not registered. Invalid name or no name given."
     else:
-        query = "INSERT INTO players (firstname, lastname) VALUES (%s, %s)"
-        values = ('chadddd', 'this is new')
-        results = executeQuery({'dbname': 'tournament', 'query' : query, 'type' : 'insert', 'values' : values})
+        query = "INSERT INTO players (name) VALUES (%s)"
+        values = (name,)
+        results = executeQuery({
+            'dbname': 'tournament', 
+            'query' : query, 
+            'type' : 'insert', 
+            'values' : values
+            })
 
 
 def playerStandings():
@@ -116,6 +123,23 @@ def playerStandings():
         wins: the number of matches the player has won
         matches: the number of matches the player has played
     """
+    # query = ("SELECT id, name, (SELECT * FROM ) FROM players")
+    # results = executeQuery({'dbname': 'tournament', 'query' : query, 'type' : 'find'})
+
+    # get players
+    # for each player get wins
+    # add wins to tuple
+    # for each player get total matches
+    # add matches to tuple
+
+    getPlayers = "SELECT id, name FROM players"
+    players = executeQuery({'dbname': 'tournament', 'query' : getPlayers, 'type' : 'find'})
+    for player in players:
+        getStats = "SELECT (SELECT count(id) FROM matches WHERE winningplayerid = (%s)) as wins"
+        values = (player[0],)
+        playerstats = executeQuery({'dbname': 'tournament', 'query' : getStats, 'type' : 'find', 'values' : values})
+        print(playerstats[0][0])
+        # merge stats with this player tuple
 
 
 def reportMatch(winner, loser):
@@ -142,4 +166,4 @@ def swissPairings():
         id2: the second player's unique id
         name2: the second player's name
     """
-registerPlayer({'firstname' : 'cassandra', 'lastname' : 'mmmhmmm' })
+playerStandings()
