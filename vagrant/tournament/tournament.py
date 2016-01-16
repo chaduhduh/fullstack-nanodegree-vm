@@ -61,7 +61,11 @@ def executeQuery(args):
 
 
 def connect(args):
-    """Connect to the PostgreSQL database.  Returns sa database connection."""
+    """Connect to the PostgreSQL database.  Returns sa database connection.
+
+        Args:
+        dbame : name of database to connect
+    """
 
     if 'dbname' in args:
         try:
