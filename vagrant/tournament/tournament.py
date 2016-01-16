@@ -123,23 +123,20 @@ def playerStandings():
         wins: the number of matches the player has won
         matches: the number of matches the player has played
     """
-    # query = ("SELECT id, name, (SELECT * FROM ) FROM players")
-    # results = executeQuery({'dbname': 'tournament', 'query' : query, 'type' : 'find'})
 
-    # get players
-    # for each player get wins
-    # add wins to tuple
-    # for each player get total matches
-    # add matches to tuple
+    player_tup = ()
+    players_list = []
 
     getPlayers = "SELECT id, name FROM players"
     players = executeQuery({'dbname': 'tournament', 'query' : getPlayers, 'type' : 'find'})
     for player in players:
-        getStats = "SELECT (SELECT count(id) FROM matches WHERE winningplayerid = (%s)) as wins"
-        values = (player[0],)
+        getStats = "SELECT (SELECT count(id) FROM matches WHERE winningplayerid = %s) as wins, \
+                    (SELECT count(id) FROM matches WHERE winningplayerid = %s OR losingplayerid = %s) as matches"
+        values = (player[0],player[0],player[0])
         playerstats = executeQuery({'dbname': 'tournament', 'query' : getStats, 'type' : 'find', 'values' : values})
-        print(playerstats[0][0])
-        # merge stats with this player tuple
+        player_tup = (player[0], player[1], playerstats[0][0], playerstats[0][1])
+        players_list.append(player_tup)
+    return players_list
 
 
 def reportMatch(winner, loser):
@@ -149,6 +146,19 @@ def reportMatch(winner, loser):
       winner:  the id number of the player who won
       loser:  the id number of the player who lost
     """
+    if not winner or not loser:
+        print "one or no players specified for report match"
+    else:
+        query = "INSERT INTO matches (playeroneid, playertwoid, winningplayerid, losingplayerid, currentstatus) \
+                              VALUES (%s,%s,%s,%s,'complete')"
+        values = (winner, loser, winner, loser)
+        results = executeQuery({
+            'dbname': 'tournament', 
+            'query' : query, 
+            'type' : 'insert', 
+            'values' : values
+            })
+
  
  
 def swissPairings():
@@ -166,4 +176,25 @@ def swissPairings():
         id2: the second player's unique id
         name2: the second player's name
     """
-playerStandings()
+    match_tup = ()
+    matches_list = []
+    player_count = 0 # keeps track of how many players per match
+    query = ("SELECT id, name, wins FROM playerstats ORDER BY wins DESC;")
+    players = executeQuery({'dbname': 'tournament', 'query' : query, 'type' : 'find'})
+    for player in players:
+        if player_count == 0:
+            playerone = player
+            player_count += 1
+        elif player_count == 1:
+            playertwo = player
+            player_count += 1
+        if player_count == 2: # match full, add then reset
+            match_tup = (playerone[0],playerone[1],playertwo[0],playertwo[1])
+            matches_list.append(match_tup)
+            player_count = 0
+    return matches_list
+
+registerPlayer('test player')
+registerPlayer('another player')
+reportMatch(1,2)
+reportMatch(3,1)

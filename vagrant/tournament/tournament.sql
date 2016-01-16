@@ -25,6 +25,13 @@ CREATE TABLE matches(
    losingplayerid BIGINT
 );
 
+-- Player Stats
+CREATE VIEW playerstats AS
+SELECT id, name, (SELECT count(m.id) from matches m where m.winningplayerid = p.id) as wins,
+	   (SELECT count(id) FROM matches WHERE winningplayerid = p.id OR losingplayerid = p.id) as matches
+FROM players p
+
+
 
 
 
