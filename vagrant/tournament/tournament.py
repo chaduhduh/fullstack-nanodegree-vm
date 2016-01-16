@@ -153,6 +153,7 @@ def reportMatch(winner, loser):
       winner:  the id number of the player who won
       loser:  the id number of the player who lost
     """
+    
     if not winner or not loser:
         print "one or no players specified for report match"
     else:
