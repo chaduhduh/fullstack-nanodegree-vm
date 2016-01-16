@@ -8,10 +8,17 @@ import psycopg2
 def executeQuery(args):
     """ Excutes a given query on a given DB and returns result 
 
-        This essentially allows for cleaner functions below and 
-        eliminates redundant code. This could also be used as a
-        wrapper to eliminate certain queries from running. For 
-        example one could remove support for insert type statements.
+        This abstracts the actual execution of the queries. This way
+        any other lib or database type could be used without needing to
+        rewrite all of the functions below. One could simply rewrite how
+        the connection is made and how query is ran. This could also be 
+        modified slightly to be a wrapper excluding certain query types.
+
+        Args:
+        dbname : name of database to connect to
+        query : query to run on database
+        type : type of query to run. Insert, find, delete
+        values : list of values to insert into query (prevent injection)
     """
 
     if 'dbname' not in args and 'query' not in args and 'type' not in args:
@@ -52,8 +59,10 @@ def executeQuery(args):
             connection.close()
             return result
 
+
 def connect(args):
     """Connect to the PostgreSQL database.  Returns sa database connection."""
+
     if 'dbname' in args:
         try:
             connection = psycopg2.connect("dbname=" + args['dbname'])
@@ -67,25 +76,29 @@ def connect(args):
 
 
 def deleteMatches():
-    """Remove all the mastch records from the database."""
+    """Remove all the match records from the database."""
+
     query = ("DELETE FROM matches;")
     results = executeQuery({'dbname': 'tournament', 'query' : query, 'type' : 'delete'})
 
 
 def deletePlayers():
     """Remove all the player records from the database."""
+
     query = ("DELETE FROM players;")
     results = executeQuery({'dbname': 'tournament', 'query' : query, 'type' : 'delete'})
 
 
 def countPlayers():
     """Returns the number of players currently registered."""
+
     count = 0
     query = ("SELECT COUNT(id) FROM players;")
     results = executeQuery({'dbname': 'tournament', 'query' : query, 'type' : 'find'})
     for row in results:
         count = row[0]
     return count
+
 
 def registerPlayer(name):
     """Adds a player to the tournament database.
@@ -94,9 +107,9 @@ def registerPlayer(name):
     should be handled by your SQL database schema, not in your Python code.)
   
     Args:
-      first name: the player's first name (need not be unique).
-      last name: the player's first name (need not be unique).
+        name : name of player to regiset
     """
+
     if len(name) < 1:
         print "Player not registered. Invalid name or no name given."
     else:
@@ -124,19 +137,9 @@ def playerStandings():
         matches: the number of matches the player has played
     """
 
-    player_tup = ()
-    players_list = []
-
-    getPlayers = "SELECT id, name FROM players"
+    getPlayers = "SELECT id, name, wins, matches FROM playerstats ORDER BY wins DESC"
     players = executeQuery({'dbname': 'tournament', 'query' : getPlayers, 'type' : 'find'})
-    for player in players:
-        getStats = "SELECT (SELECT count(id) FROM matches WHERE winningplayerid = %s) as wins, \
-                    (SELECT count(id) FROM matches WHERE winningplayerid = %s OR losingplayerid = %s) as matches"
-        values = (player[0],player[0],player[0])
-        playerstats = executeQuery({'dbname': 'tournament', 'query' : getStats, 'type' : 'find', 'values' : values})
-        player_tup = (player[0], player[1], playerstats[0][0], playerstats[0][1])
-        players_list.append(player_tup)
-    return players_list
+    return players
 
 
 def reportMatch(winner, loser):
@@ -149,8 +152,9 @@ def reportMatch(winner, loser):
     if not winner or not loser:
         print "one or no players specified for report match"
     else:
-        query = "INSERT INTO matches (playeroneid, playertwoid, winningplayerid, losingplayerid, currentstatus) \
-                              VALUES (%s,%s,%s,%s,'complete')"
+        query = "INSERT INTO matches \
+                (playeroneid, playertwoid, winningplayerid, losingplayerid, currentstatus) \
+                VALUES (%s,%s,%s,%s,'complete')"
         values = (winner, loser, winner, loser)
         results = executeQuery({
             'dbname': 'tournament', 
@@ -158,7 +162,6 @@ def reportMatch(winner, loser):
             'type' : 'insert', 
             'values' : values
             })
-
  
  
 def swissPairings():
@@ -176,6 +179,7 @@ def swissPairings():
         id2: the second player's unique id
         name2: the second player's name
     """
+
     match_tup = ()
     matches_list = []
     player_count = 0 # keeps track of how many players per match
@@ -188,13 +192,9 @@ def swissPairings():
         elif player_count == 1:
             playertwo = player
             player_count += 1
-        if player_count == 2: # match full, add then reset
+        if player_count == 2: # match full, add match to list then reset
             match_tup = (playerone[0],playerone[1],playertwo[0],playertwo[1])
             matches_list.append(match_tup)
             player_count = 0
     return matches_list
 
-registerPlayer('test player')
-registerPlayer('another player')
-reportMatch(1,2)
-reportMatch(3,1)
