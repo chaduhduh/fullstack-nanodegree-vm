@@ -8,7 +8,7 @@ Tournament Code
 
 Tournament code creates a database with players and thier matches. tournament.py contains helper functions to perform various actions on the databse such as: adding players, reporting matches, deleting players, and matching players based on skill. Tournament_test performs code tests to verify that all functions in tournament.py are working as inteded.
 
-TO RUN:
+<b>To Run:</b><br />
 1. Make sure you have Virtual Box and Vagrant installed. (https://www.virtualbox.org/, https://www.vagrantup.com/)<br />
 2. Clone the repo to your machine <br />
 3. Navigate to the vagrant folder inside of the cloned repo at /fullstack-nanodegree-vm/vagrant<br />
