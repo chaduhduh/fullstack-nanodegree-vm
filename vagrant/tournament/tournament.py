@@ -158,9 +158,9 @@ def reportMatch(winner, loser):
         print "one or no players specified for report match"
     else:
         query = "INSERT INTO matches \
-                (playeroneid, playertwoid, winningplayerid, losingplayerid, currentstatus) \
-                VALUES (%s,%s,%s,%s,'complete')"
-        values = (winner, loser, winner, loser)
+                (playeroneid, losingplayerid) \
+                VALUES (%s,%s)"
+        values = (winner, loser)
         results = executeQuery({
             'dbname': 'tournament', 
             'query' : query, 
@@ -188,8 +188,7 @@ def swissPairings():
     match_tup = ()
     matches_list = []
     player_count = 0 # keeps track of how many players per match
-    query = ("SELECT id, name, wins FROM playerstats ORDER BY wins DESC;")
-    players = executeQuery({'dbname': 'tournament', 'query' : query, 'type' : 'find'})
+    players = playerStandings();
     for player in players:
         if player_count == 0:
             playerone = player

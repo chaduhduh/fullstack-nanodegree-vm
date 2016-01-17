@@ -19,17 +19,15 @@ DROP TABLE IF EXISTS matches CASCADE;
 CREATE TABLE matches(
    id SERIAL PRIMARY KEY,
    playeroneid BIGINT references players(id),
-   playertwoid BIGINT references players(id),
-   currentstatus VARCHAR(30),
-   winningplayerid BIGINT,
-   losingplayerid BIGINT
+   losingplayerid BIGINT references players(id)
 );
 
 -- Player Stats
 CREATE VIEW playerstats AS
-SELECT id, name, (SELECT count(m.id) from matches m where m.winningplayerid = p.id) as wins,
-	   (SELECT count(id) FROM matches WHERE winningplayerid = p.id OR losingplayerid = p.id) as matches
+SELECT id, name, (SELECT count(m.id) from matches m where m.playeroneid = p.id) as wins,
+	   (SELECT count(id) FROM matches WHERE playeroneid = p.id OR losingplayerid = p.id) as matches
 FROM players p
+ORDER BY wins DESC
 
 
 
