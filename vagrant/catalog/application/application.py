@@ -29,15 +29,44 @@ def connect_db():
 # routes
 @app.route('/')
 def Home():
-	item = Items(name="Item 1")
-	session.add(item)
-	session.commit()
-	return "added items"
+	return "Welcome"
 
-@app.route('/test')
-def HelloWorld():
-	item = session.query(Items).first()
-	return "Item is " + item.name
+@app.route('/update-item/<name>')
+def Update(name):
+	item = session.query(Items).filter_by(name=name).first()
+	if item:
+		# do some alterations to data here
+		session.add(item)
+		session.commit()
+		return "updated " + item.name
+	else: 
+		return "item not found"
+
+@app.route('/delete-item/<name>')
+def Delete(name):
+	item = session.query(Items).filter_by(name=name).first()
+	session.delete(item)
+	session.commit()
+	return "deleted"
+
+@app.route('/create-item/<name>')
+def Create(name):
+	if(name):
+		# validate data first
+		item = Items(name=name)
+		session.add(item)
+		session.commit()
+		return "added item named = " + item.name
+	else:
+		return "nothing added"
+
+@app.route('/read-item/<name>')
+def Read(name):
+	item = session.query(Items).filter_by(name=name).first()
+	if item:
+		return "Item is " + item.name
+	else:
+		return "Nothing to show here"
  	# items = session.query(MenuItem).filter_by(restaurant_id=restaurant.id)
 
 if __name__ == '__main__':
