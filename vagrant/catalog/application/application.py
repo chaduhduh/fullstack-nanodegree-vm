@@ -3,14 +3,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from database_setup import Base, Items
 
-
-# configuration
-DATABASE = '/tmp/flaskr.db'
-DEBUG = True
-SECRET_KEY = 'development key'
-USERNAME = 'admin'
-PASSWORD = 'default'
-
 app = Flask(__name__)
 app.config.from_object(__name__)
 
@@ -19,12 +11,6 @@ Base.metadata.bind = engine
 
 DBSession = sessionmaker(bind=engine)
 session = DBSession()
-
-
-# functions
-def connect_db():
-    return sqlite3.connect(app.config['DATABASE'])
-
 
 # routes
 @app.route('/')
