@@ -1,51 +1,53 @@
 {% extends "layout.html" %}
+{% block title %}Index{% endblock %}
 {% block head_tag %}
-  {{ super() }}<!-- extend default -->
-  <script src="//apis.google.com/js/platform.js?onload=start"></script>
+    {{ super() }}
+    <script src="//apis.google.com/js/platform.js?onload=start"></script>
 {% endblock %}
 {% block content %}
-  <h1>Please Login to Use the System</h1>
-  <div id="result"></div>
-  <div id="signInButton">
-    <span class="g-signin"
-      data-scope="openid email"
-      data-clientid="1086125913606-te1dj092q4n1bo11odjenhrsp0docme6.apps.googleusercontent.com"
-      data-redirecturi="postmessage"
-      data-accesstype="offline"
-      data-cookiepolicy="single_host_origin"
-      data-callback="signInCallback"
-      data-approvalprompt="force">
-    </span>
-  </div>
-  <script>
-    function signInCallback(authResult) {
-      if (authResult['code']) {
-        // Hide the sign-in button now that the user is authorized
-        $('#signinButton').attr('style', 'display: none');
+    <div id="result"></div>
+    {% if data.login_session.name %}
+      <h1>You are logged in</h1>
+      <a href="/logout">Logout</a>
+    {% else %}
+      <h1>Please Login to Use the System</h1>
+      <div id="signInButton">
+        <span class="g-signin"
+          data-scope="openid email"
+          data-clientid="1086125913606-te1dj092q4n1bo11odjenhrsp0docme6.apps.googleusercontent.com"
+          data-redirecturi="postmessage"
+          data-accesstype="offline"
+          data-cookiepolicy="single_host_origin"
+          data-callback="signInCallback"
+          data-approvalprompt="force">
+        </span>
+      </div>
+    {% endif %}
+    <script>
+      function signInCallback(authResult) {
+        if (authResult['code']) {
+          // Hide the sign-in button now that the user is authorized
+          $('#signinButton').attr('style', 'display: none');
 
-        $.ajax({
-          type: 'POST',
-          url: '{{url_for("connect_googleplus")}}?state={{data.login_session.hash_key}}',
-          processData: false,
-          data: authResult['code'],
-          contentType: 'application/octet-stream; charset=utf-8',
-          success: success(result, null) 
-        });
-      } else if (authResult['error']) {
-          console.log('There was an error: ' + authResult['error']);
-      } else {
-          $('#result').html('Failed to make a server-side call. \
-                                Check your configuration and console.');
+          $.ajax({
+            type: 'POST',
+            url: '{{url_for("connect_googleplus")}}?hash_key={{data.login_session.hash_key}}',
+            processData: false,
+            data: authResult['code'],
+            contentType: 'application/octet-stream; charset=utf-8',
+            success: function(result){
+              $('#result').html('Login Successful!</br>'+ result + '</br>Redirecting...')
+               setTimeout(function() {
+                window.location.href = "{{url_for('home')}}";
+               }, 4000);
+            }
+          });
+        } else if (authResult['error']) {
+            console.log('There was an error: ' + authResult['error']);
+        } else {
+            $('#result').html('Failed to make a server-side call. \
+                                  Check your configuration and console.');
+        }
       }
-    }
-    function success(result, cb){
-      // Handle or verify the server response if necessary.
-      if (result) {
-        $('#result').html('Login Successful!</br>'+ result + '</br>Redirecting...')
-         setTimeout(function() {
-          window.location.href = "/restaurant";
-         }, 4000);
-      }
-    }
-  </script>
+    </script>
 {% endblock %}
