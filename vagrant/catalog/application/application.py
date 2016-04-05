@@ -35,20 +35,20 @@ def login():
     login_session['hash_key'] = hash_key
     return render_template('login.html', data = { "login_session" : login_session })
 
+
 @app.route('/logout')
 def logout():
 	login_session['name'] = ''
 	return redirect(url_for('home'))
 
+
 @app.route('/connect-googleplus/', methods=['POST'])
 def connect_googleplus():
-	# if request.args.get('hash_key') != login_session['hash_key']:
-	# 	response = make_response(json.dumps('Not Permitted.'), 401)
-	# 	login_session = ''
-	# 	response.headers['Content-Type'] = 'application/json'
-	# 	return response
-	# Obtain authorization code
-	# code = request.data
+	if request.args.get('hash_key') != login_session['hash_key']:
+		response = make_response(json.dumps('Not Permitted'), 401)
+		response.headers['Content-Type'] = 'application/json'
+		return response
+	code = request.data
 	login_session['name'] = "heraldo"
 	return "connecting google plus"
 
