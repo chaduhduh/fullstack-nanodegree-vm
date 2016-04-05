@@ -1,38 +1,58 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session as login_session, make_response
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from database_setup import Base, Items
 
+from oauth2client.client import flow_from_clientsecrets
+from oauth2client.client import FlowExchangeError
+import httplib2
+import json
+import requests
+import random
+import string
+
 app = Flask(__name__)
 app.config.from_object(__name__)
+app.secret_key = '\x11\xa4W[\xfc\xba\x1df-\xe5OrW\xc1\xc3\xd8>r\xc1\xbciV\xfbp'
 
 engine = create_engine('sqlite:///catalog.db')
 Base.metadata.bind = engine
 
 DBSession = sessionmaker(bind=engine)
-session = DBSession()
+db = DBSession()
 
 # routes
 @app.route('/')
 def Home():
 	return "Welcome"
 
+@app.route('/login')
+def showLogin():
+    hash_key = ''.join(random.choice(string.ascii_uppercase + string.digits)
+                    for x in xrange(32))
+    login_session['hash_key'] = hash_key
+    return render_template('login.html', data = { "login_session" : login_session })
+
+@app.route('/connect-googleplus/', methods=['POST'])
+def connect_googleplus():
+	return "connecting google plus"
+
 @app.route('/update-item/<name>')
 def Update(name):
-	item = session.query(Items).filter_by(name=name).first()
+	item = db.query(Items).filter_by(name=name).first()
 	if item:
 		# do some alterations to data here
-		session.add(item)
-		session.commit()
+		db.add(item)
+		db.commit()
 		return "updated " + item.name
 	else: 
 		return "item not found"
 
 @app.route('/delete-item/<name>')
 def Delete(name):
-	item = session.query(Items).filter_by(name=name).first()
-	session.delete(item)
-	session.commit()
+	item = db.query(Items).filter_by(name=name).first()
+	db.delete(item)
+	db.commit()
 	return "deleted"
 
 @app.route('/create-item/<name>')
@@ -40,15 +60,15 @@ def Create(name):
 	if(name):
 		# validate data first
 		item = Items(name=name)
-		session.add(item)
-		session.commit()
+		db.add(item)
+		db.commit()
 		return "added item named = " + item.name
 	else:
 		return "nothing added"
 
 @app.route('/read-item/<name>')
 def Read(name):
-	item = session.query(Items).filter_by(name=name).first()
+	item = db.query(Items).filter_by(name=name).first()
 	if item:
 		return "Item is " + item.name
 	else:
