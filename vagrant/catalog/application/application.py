@@ -2,7 +2,7 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session as login_session, make_response, flash
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from database_setup import Base, Items
+from database_setup import Base, Items as Item, Users as User
 
 from oauth2client.client import flow_from_clientsecrets
 from oauth2client.client import FlowExchangeError
@@ -22,11 +22,16 @@ DBSession = sessionmaker(bind=engine)
 db = DBSession()
 CLIENT_ID = json.loads(
     open('client_secret.json', 'r').read())['web']['client_id']
+session_keys = ["user_id", "access_token", "name", "gplus_id", "username", "email", "picture"]
 
 
 # routes
 @app.route('/')
 def home():
+	if 'hash_key' not in login_session:
+		hash_key = ''.join(random.choice(string.ascii_uppercase + string.digits)
+			for x in xrange(32))
+		login_session['hash_key'] = hash_key
 	return render_template('login.html', data = { "login_session" : login_session })
 
 
@@ -40,9 +45,12 @@ def login():
 
 @app.route('/logout')
 def logout():
-	login_session['name'] = ''
-	return redirect(url_for('home'))
+	return redirect(url_for('gdisconnect'))
 
+@app.route('/user/email')
+def user_email():
+	data = login_session['email']
+	return data
 
 @app.route('/connect-googleplus/', methods=['POST'])
 def connect_googleplus():
@@ -51,7 +59,6 @@ def connect_googleplus():
 		response.headers['Content-Type'] = 'application/json'
 		return response
 	code = request.data
-	login_session['name'] = "heraldo"
 	try:
 	    # Upgrade the authorization code into a credentials object
 	    oauth_flow = flow_from_clientsecrets('client_secret.json', scope='')
@@ -98,7 +105,7 @@ def connect_googleplus():
 		return response
 
 	# Store the access token in the session for later use.
-	# login_session['credentials'] = credentials - TODO ERROR ?
+	login_session['access_token'] = credentials.access_token
 	login_session['gplus_id'] = gplus_id
 
 	# Get user info
@@ -107,20 +114,55 @@ def connect_googleplus():
 	answer = requests.get(userinfo_url, params=params)
 
 	data = answer.json()
-	login_session['username'] = data['name']
-	login_session['picture'] = data['picture']
+	login_session['name'] = data['name']
+	login_session['image'] = data['picture']
 	login_session['email'] = data['email']
 
-	output = ''
-	output += '<h1>Welcome, '
-	output += login_session['username']
-	output += '!</h1>'
-	output += '<img src="'
-	output += login_session['picture']
-	output += ' " style = "width: 300px; height: 300px;border-radius: 150px;-webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
-	flash("you are now logged in as %s" % login_session['username'])
-	print "done!"
-	return output
+	# test delete user first
+	deleted_user = delete_user({'email' : login_session['email']})
+
+	# Create user only if we do not already have the same email
+	user = db.query(User).filter_by(email=login_session['email']).first()
+	if user is None:
+		user_created = create_user({'login_session' : login_session})
+		# login_session['user_id'] = user_created['id']
+		print "user created"
+		if user_created is False:
+			response = make_response(json.dumps('Failed to create User.'), 
+				500)
+			response.headers['Content-Type'] = 'application/json'
+			return response
+	else:
+		print "user already exists"
+
+	# Prepares the function response given nothing above failed
+	final_response = make_response(json.dumps("success"), 200)
+	return final_response
+
+
+@app.route('/gdisconnect')
+def gdisconnect():
+	if 'access_token' not in login_session:
+		response = make_response(json.dumps('Current user not connected.'), 401)
+		response.headers['Content-Type'] = 'application/json'
+		return response
+	h = httplib2.Http()
+	result = h.request('https://accounts.google.com/o/oauth2/revoke?token=%s' 
+    	% login_session['access_token'], 'GET')[0]
+	if result['status'] == '200':
+		session_cleared = revoke_session()
+		if(session_cleared):
+			response = make_response(json.dumps('Successfully disconnected.'), 200)
+			response.headers['Content-Type'] = 'application/json'
+			return response
+		else:
+			response = make_response(json.dumps('Something went wrong. User name not found', 400))
+			response.headers['Content-Type'] = 'application/json'
+			return response
+	else:
+		response = make_response(json.dumps('Failed to revoke token for given user.', 400))
+		response.headers['Content-Type'] = 'application/json'
+		return response
 
 
 @app.route('/update-item/<name>')
@@ -164,6 +206,44 @@ def Read(name):
 		return "Nothing to show here"
  	# items = session.query(MenuItem).filter_by(restaurant_id=restaurant.id)
 
+
+# functions
+
+def revoke_session():
+	for key in session_keys:
+		if key in login_session:
+			del login_session[key]
+	if 'name' in login_session:
+		return False
+	else:
+		return True
+
+
+def create_user(args):
+	if 'login_session' not in args:
+		return False
+	user_session = args['login_session']
+	user = User(name=user_session['name'], image=user_session['image'], 
+		email=user_session['email'])
+	db.add(user)
+	db.commit()
+	added_user = db.query(User).filter_by(email=user_session['email']).one()
+	return added_user
+
+
+def delete_user(args):
+	if 'email' in args:
+		key = 'email'
+		value = args['email']
+	elif 'user_id' in args:
+		key = 'user_id'
+		value = args['user_id']
+	if key and value:
+		# user = db.query(User).filter(User['email'] == value)
+		user = db.query(User).filter_by(email=value).one()
+		db.delete(user)
+		db.commit()
+	return user
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

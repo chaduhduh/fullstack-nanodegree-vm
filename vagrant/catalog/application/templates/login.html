@@ -6,11 +6,12 @@
 {% endblock %}
 {% block content %}
     <div id="result"></div>
-    {% if data.login_session.name %}
-      <h1>You are logged in</h1>
+    {% if data.login_session.access_token %}
+      <h1>{{ data.login_session.email }} is logged in</h1>
       <a href="/logout">Logout</a>
     {% else %}
       <h1>Please Login to Use the System</h1>
+      {{ data.login_session.email }}
       <div id="signInButton">
         <span class="g-signin"
           data-scope="openid email"
@@ -36,10 +37,8 @@
             data: authResult['code'],
             contentType: 'application/octet-stream; charset=utf-8',
             success: function(result){
-              $('#result').html('Login Successful!</br>'+ result + '</br>Redirecting...')
-               setTimeout(function() {
+              // $('#result').html('Login Successful!</br>'+ result + '</br>Redirecting...')
                 window.location.href = "{{url_for('home')}}";
-               }, 4000);
             }
           });
         } else if (authResult['error']) {
