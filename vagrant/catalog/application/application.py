@@ -24,7 +24,6 @@ CLIENT_ID = json.loads(
     open('client_secret.json', 'r').read())['web']['client_id']
 session_keys = ["user_id", "access_token", "name", "gplus_id", "username", "email", "picture"]
 
-
 # routes
 @app.route('/')
 def home():
@@ -73,8 +72,8 @@ def connect_googleplus():
 	# make sure its a valid token
 	access_token = credentials.access_token
 	url = ('https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=%s'% access_token)
-	h = httplib2.Http()
-	result = json.loads(h.request(url, 'GET')[1])
+	http = httplib2.Http()
+	result = json.loads(http.request(url, 'GET')[1])
 	# If there was an error in the access token info, abort.
 	if result.get('error') is not None:
 		response = make_response(json.dumps(result.get('error')), 500)
@@ -119,21 +118,21 @@ def connect_googleplus():
 	login_session['email'] = data['email']
 
 	# test delete user first
-	deleted_user = delete_user({'email' : login_session['email']})
+	# deleted_user = delete_user({'email' : login_session['email']})
 
 	# Create user only if we do not already have the same email
 	user = db.query(User).filter_by(email=login_session['email']).first()
 	if user is None:
 		user_created = create_user({'login_session' : login_session})
-		# login_session['user_id'] = user_created['id']
-		print "user created"
+		login_session['user_id'] = user_created.id
+		print "user created " + user_created.email
 		if user_created is False:
 			response = make_response(json.dumps('Failed to create User.'), 
 				500)
 			response.headers['Content-Type'] = 'application/json'
 			return response
 	else:
-		print "user already exists"
+		print "user already exists " + user.email
 
 	# Prepares the function response given nothing above failed
 	final_response = make_response(json.dumps("success"), 200)
@@ -146,8 +145,8 @@ def gdisconnect():
 		response = make_response(json.dumps('Current user not connected.'), 401)
 		response.headers['Content-Type'] = 'application/json'
 		return response
-	h = httplib2.Http()
-	result = h.request('https://accounts.google.com/o/oauth2/revoke?token=%s' 
+	http = httplib2.Http()
+	result = http.request('https://accounts.google.com/o/oauth2/revoke?token=%s' 
     	% login_session['access_token'], 'GET')[0]
 	if result['status'] == '200':
 		session_cleared = revoke_session()
@@ -167,7 +166,7 @@ def gdisconnect():
 
 @app.route('/update-item/<name>')
 def Update(name):
-	item = db.query(Items).filter_by(name=name).first()
+	item = db.query(Item).filter_by(name=name).first()
 	if item:
 		# do some alterations to data here
 		db.add(item)
@@ -176,10 +175,23 @@ def Update(name):
 	else: 
 		return "item not found"
 
+@app.route('/revoke')
+def revoke():
+	revoke_session()
+	return redirect(url_for('home'))
+
+@app.route('/User/delete')
+def user_delete():
+	user = db.query(User).filter_by(email=login_session['email']).first()
+	db.delete(user)
+	db.commit()
+	revoke_session()
+	return redirect(url_for('home'))
+
 
 @app.route('/delete-item/<name>')
 def Delete(name):
-	item = db.query(Items).filter_by(name=name).first()
+	item = db.query(Item).filter_by(name=name).first()
 	db.delete(item)
 	db.commit()
 	return "deleted"
@@ -187,19 +199,25 @@ def Delete(name):
 
 @app.route('/create-item/<name>')
 def Create(name):
+	if login_session['access_token'] is None:
+		response = make_response(json.dumps('Not Authorized.'), 401)
+		response.headers['Content-Type'] = 'application/json'
+		return response
 	if(name):
 		# validate data first
-		item = Items(name=name)
+		item = Item(name=name,user_id=login_session['user_id'])
 		db.add(item)
 		db.commit()
-		return "added item named = " + item.name
+		response = make_response(json.dumps('Success.'), 200)
+		response.headers['Content-Type'] = 'application/json'
+		return response
 	else:
 		return "nothing added"
 
 
 @app.route('/read-item/<name>')
 def Read(name):
-	item = db.query(Items).filter_by(name=name).first()
+	item = db.query(Item).filter_by(name=name).first()
 	if item:
 		return "Item is " + item.name
 	else:
@@ -240,7 +258,7 @@ def delete_user(args):
 		value = args['user_id']
 	if key and value:
 		# user = db.query(User).filter(User['email'] == value)
-		user = db.query(User).filter_by(email=value).one()
+		user = db.query(User).filter_by(email=value).first()
 		db.delete(user)
 		db.commit()
 	return user
