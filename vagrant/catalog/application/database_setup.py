@@ -21,7 +21,7 @@ class Items(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(250), nullable=False)
-    user_id = Column(Integer, ForeignKey('users.id'))
+    user_id = Column("user_id", Integer, ForeignKey('users.id'))
 
 engine = create_engine('sqlite:///catalog.db')
 

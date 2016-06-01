@@ -197,20 +197,25 @@ def Delete(name):
 	return "deleted"
 
 
-@app.route('/create-item/<name>')
-def Create(name):
-	if login_session['access_token'] is None:
-		response = make_response(json.dumps('Not Authorized.'), 401)
-		response.headers['Content-Type'] = 'application/json'
-		return response
-	if(name):
-		# validate data first
-		item = Item(name=name,user_id=login_session['user_id'])
-		db.add(item)
-		db.commit()
-		response = make_response(json.dumps('Success.'), 200)
-		response.headers['Content-Type'] = 'application/json'
-		return response
+@app.route('/Item/', methods=['POST'])
+def create_item():
+	if request.method == 'POST':
+		form_data = request.values
+		if form_data['hash_key'] != login_session['hash_key']:
+			response = make_response(json.dumps('Not Permitted'), 401)
+			response.headers['Content-Type'] = 'application/json'
+			return response
+		if form_data['title']:
+			item = Item(name=form_data['title'],user_id=login_session['user_id'])
+			db.add(item)
+			db.commit()
+			response = make_response(json.dumps('Success.'), 200)
+			response.headers['Content-Type'] = 'application/json'
+			return response
+		else:
+			response = make_response(json.dumps('Something went wrong'), 502)
+			response.headers['Content-Type'] = 'application/json'
+			return response
 	else:
 		return "nothing added"
 
@@ -223,6 +228,11 @@ def Read(name):
 	else:
 		return "Nothing to show here"
  	# items = session.query(MenuItem).filter_by(restaurant_id=restaurant.id)
+
+
+@app.route('/new-item')
+def new_item():
+	return render_template('add_item.html', data = { "login_session" : login_session })
 
 
 # functions
