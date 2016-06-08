@@ -21,8 +21,31 @@ class Items(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(250), nullable=False)
+    text = Column(String(500))
+    category_id = Column("category_id", Integer, ForeignKey('categories.id'))
     user_id = Column("user_id", Integer, ForeignKey('users.id'))
+
+
+class Categories(Base):
+    __tablename__ = 'categories'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(250), nullable=False)
+
 
 engine = create_engine('sqlite:///catalog.db')
 
 Base.metadata.create_all(engine)
+
+# Seed Categories
+engine.execute("""
+	DELETE FROM Categories where 1 = 1;
+""")
+engine.execute("""
+	INSERT INTO Categories (name) values 
+		("Music"),
+		("Sports"),
+		("Entertainment"),
+		("Dining"),
+		("Funny")
+""")

@@ -2,7 +2,7 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session as login_session, make_response, flash
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from database_setup import Base, Items as Item, Users as User
+from database_setup import Base, Items as Item, Users as User, Categories as Categories
 
 from oauth2client.client import flow_from_clientsecrets
 from oauth2client.client import FlowExchangeError
@@ -18,6 +18,7 @@ app.config.from_object(__name__)
 app.secret_key = '\x11\xa4W[\xfc\xba\x1df-\xe5OrW\xc1\xc3\xd8>r\xc1\xbciV\xfbp'
 engine = create_engine('sqlite:///catalog.db')
 Base.metadata.bind = engine
+# Base.metadata.drop_all()
 DBSession = sessionmaker(bind=engine)
 db = DBSession()
 CLIENT_ID = json.loads(
@@ -206,7 +207,7 @@ def create_item():
 			response.headers['Content-Type'] = 'application/json'
 			return response
 		if form_data['title']:
-			item = Item(name=form_data['title'],user_id=login_session['user_id'])
+			item = Item(name=form_data['title'],user_id=login_session['user_id'],text=form_data['text'] or "", category_id=form_data['category'])
 			db.add(item)
 			db.commit()
 			response = make_response(json.dumps('Success.'), 200)
@@ -223,6 +224,9 @@ def create_item():
 @app.route('/read-item/<name>')
 def Read(name):
 	item = db.query(Item).filter_by(name=name).first()
+	cats = db.query(Categories).filter_by(id=item.category_id).first()
+	item += (cats,)
+	print vars(item)
 	if item:
 		return "Item is " + item.name
 	else:
@@ -232,7 +236,8 @@ def Read(name):
 
 @app.route('/new-item')
 def new_item():
-	return render_template('add_item.html', data = { "login_session" : login_session })
+	cats = db.query(Categories).all()
+	return render_template('add_item.html', data = { "login_session" : login_session, "categories" : cats})
 
 
 # functions

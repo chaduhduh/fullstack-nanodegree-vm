@@ -7,17 +7,20 @@
     <div id="result"></div>
     {% if data.login_session.access_token %}
       <div class="row">
+      Cats here
+       
         <div class="columns small-centered small-11 medium-centered medium-9 large-centered large-9">
            <form action="#" method="post" data-add-form>
             <input type="hidden" name="hash_key" value="{{data.login_session.hash_key}}">
-            <select name="category" id="category">
-              <option value="music">music</option>
-              <option value="sports">sports</option>
-              <option value="fashion">fashion</option>
-              <option value="tech">tech</option>
-            </select>
+            {% if data.categories %}
+              <select name="category" id="category">
+                {% for category in data.categories %}
+                  <option value="{{ category.id }}">{{ category.name }}</option>
+                {% endfor %}
+              </select>
+            {% endif %}
             <input type="text" name="title">
-            <input type="text" name="description">
+            <textarea name="text" maxlength="499"></textarea>
             <input type="submit" value="submit">
           </form>
         </div>
