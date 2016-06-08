@@ -223,15 +223,30 @@ def create_item():
 
 @app.route('/read-item/<name>')
 def Read(name):
-	item = db.query(Item).filter_by(name=name).first()
-	cats = db.query(Categories).filter_by(id=item.category_id).first()
-	item += (cats,)
-	print vars(item)
-	if item:
-		return "Item is " + item.name
+	data = db.query(Item, Categories).join(Categories).filter(Item.name==name, Categories.id==Item.category_id).first()
+	if data:
+		json_data = { 
+			'success' : True, 
+			'data' : [
+				{  
+					'id' : data.Items.id,
+					'name' : data.Items.name,
+					'cats' : [
+						{
+							'id' : data.Categories.id,
+							'name' : data.Categories.name
+						}
+					]
+				}
+			]
+		}
+		response = make_response(json.dumps(json_data), 200)
+		response.headers['Content-Type'] = 'application/json'
+		return response
 	else:
-		return "Nothing to show here"
- 	# items = session.query(MenuItem).filter_by(restaurant_id=restaurant.id)
+		response = make_response(json.dumps({ 'success' : False, 'docs' : []}), 200)
+		response.headers['Content-Type'] = 'application/json'
+		return response
 
 
 @app.route('/new-item')
