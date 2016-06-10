@@ -133,6 +133,7 @@ def connect_googleplus():
 			response.headers['Content-Type'] = 'application/json'
 			return response
 	else:
+		login_session['user_id'] = user.id
 		print "user already exists " + user.email
 
 	# Prepares the function response given nothing above failed
@@ -165,7 +166,7 @@ def gdisconnect():
 		return response
 
 
-@app.route('/update-item/<name>')
+@app.route('/Item/update/<name>')
 def Update(name):
 	item = db.query(Item).filter_by(name=name).first()
 	if item:
@@ -190,7 +191,7 @@ def user_delete():
 	return redirect(url_for('home'))
 
 
-@app.route('/delete-item/<name>')
+@app.route('/Item/delete/<name>')
 def Delete(name):
 	item = db.query(Item).filter_by(name=name).first()
 	db.delete(item)
@@ -198,7 +199,7 @@ def Delete(name):
 	return "deleted"
 
 
-@app.route('/Item/', methods=['POST'])
+@app.route('/Item/', methods=['POST', 'GET'])
 def create_item():
 	if request.method == 'POST':
 		form_data = request.values
@@ -207,7 +208,7 @@ def create_item():
 			response.headers['Content-Type'] = 'application/json'
 			return response
 		if form_data['title']:
-			item = Item(name=form_data['title'],user_id=login_session['user_id'],text=form_data['text'] or "", category_id=form_data['category'])
+			item = Item(name=form_data['title'],user_id=login_session['user_id'],text=form_data['text'] or "", category_id=form_data['category'] or None)
 			db.add(item)
 			db.commit()
 			response = make_response(json.dumps('Success.'), 200)
@@ -218,35 +219,81 @@ def create_item():
 			response.headers['Content-Type'] = 'application/json'
 			return response
 	else:
-		return "nothing added"
+		return Read_all()
 
 
-@app.route('/read-item/<name>')
-def Read(name):
-	data = db.query(Item, Categories).join(Categories).filter(Item.name==name, Categories.id==Item.category_id).first()
+@app.route('/Item/read/<int:id>')
+def Read(id):
+	json_data = { 'success' : False, 'data' : []}
+	data = db.query(Item, Categories).join(Categories).filter(Item.id==id).first()
 	if data:
-		json_data = { 
-			'success' : True, 
-			'data' : [
-				{  
-					'id' : data.Items.id,
-					'name' : data.Items.name,
-					'cats' : [
-						{
-							'id' : data.Categories.id,
-							'name' : data.Categories.name
-						}
-					]
-				}
-			]
-		}
-		response = make_response(json.dumps(json_data), 200)
-		response.headers['Content-Type'] = 'application/json'
-		return response
-	else:
-		response = make_response(json.dumps({ 'success' : False, 'docs' : []}), 200)
-		response.headers['Content-Type'] = 'application/json'
-		return response
+		json_data['id'] = data.Items.id
+		json_data['name'] = data.Items.name
+		json_data['cats'] = []
+		if(data.Categories):
+			json_data['cats'].append({
+				'id' : data.Categories.id,
+				'name' : data.Categories.name
+			})
+	response = make_response(json.dumps(json_data), 200)
+	response.headers['Content-Type'] = 'application/json'
+	return response
+
+
+@app.route('/Item/read/')
+def Read_all():
+	json_data = { 'success' : False, 'data' : []}
+	data = db.query(Item, Categories).join(Categories).all()
+	if data:
+		json_data['success'] = True
+		for result in data:
+			if result.Items:
+				db_item = result.Items
+				item = { 'name' : db_item.name, 'id' : db_item.id, 'text' : db_item.text, 'categories' : [] }
+			if result.Categories:
+				cat = result.Categories
+				item['categories'].append({ 'name' : cat.name, 'id' : cat.id })
+			if item:
+				json_data['data'].append(item)
+	response = make_response(json.dumps(json_data), 200)
+	response.headers['Content-Type'] = 'application/json'
+	return response
+
+
+@app.route('/Categories/read/')
+def Categories_read():
+	json_data = { 'success' : False, 'data' : []}
+	data = db.query(Categories).all()
+	if data:
+		json_data['success'] = True
+		for result in data:
+			json_data['data'].append({ 'name' : result.name, 'id' : result.id }) 
+	response = make_response(json.dumps(json_data), 200)
+	response.headers['Content-Type'] = 'application/json'
+	return response
+
+
+@app.route('/Categories/read/Items/')
+def Categories_with_items():
+	json_data = { 'success' : False, 'data' : []}
+	data = db.query(Categories, Item).join(Item).all()
+	if data:
+		json_data['success'] = True
+		# for result in data:
+		# 	# print vars(result)
+		# 	print result.Items.category_id
+		# 	if result.Categories:
+		# 		cat = result.Categories
+		# 		item = { 'name' : cat.name, 'id' : cat.id, 'items' : [] }
+		# 	# 	item = { 'name' : cat.name, 'id' : cat.id, 'items' : [] }
+		# 	# if result.Items:
+		# 	# 	db_item = result.Items
+		# 	# 	item['items'].append({ 'name' : db_item.name, 'id' : db_item.id, 'text' : db_item.text})
+		# 	if item:
+		# 		json_data['data'].append(item)
+	response = make_response(json.dumps(json_data), 200)
+	response.headers['Content-Type'] = 'application/json'
+	return response
 
 
 @app.route('/new-item')
