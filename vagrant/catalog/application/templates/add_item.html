@@ -19,8 +19,19 @@
                 {% endfor %}
               </select>
             {% endif %}
-            <input type="text" name="title">
-            <textarea name="text" maxlength="499"></textarea>
+            {% if data.item %}
+                  <input type="hidden" name="id" value="{{data.item.id}}">
+                  <input type="text" name="title" value="{% if data.item.name %}{{ data.item.name }}{% endif %}">
+                  <textarea name="text" maxlength="499">
+                      {% if data.item.text %}
+                          {{ data.item.text }}
+                      {% endif %}
+                 </textarea>
+            {% else %}
+                  <input type="text" name="title">
+                  <textarea name="text" maxlength="499"></textarea>
+            {% endif %}
+           
             <input type="submit" value="submit">
           </form>
         </div>
@@ -45,7 +56,11 @@
             var data = $(this).serialize();
 
             $.ajax({
-                url: '{{url_for("create_item")}}',
+                url: '{% if data.update  %}\
+                        /Item/update/\
+                      {% else %}\
+                          {{url_for("create_item")}}\
+                      {% endif %}',
                 type: 'POST',
                 contentType: "application/x-www-form-urlencoded",
                 data: data,
