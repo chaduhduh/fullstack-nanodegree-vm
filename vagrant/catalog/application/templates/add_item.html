@@ -70,23 +70,36 @@
             e.preventDefault();
             var data = $(this).serialize();
 
-            $.ajax({
-                url: '{% if data.item  %}\
-                        /Item/update/\
-                      {% else %}\
-                          {{url_for("create_item")}}\
-                      {% endif %}',
-                type: 'POST',
-                contentType: "application/x-www-form-urlencoded",
-                data: data,
-                success: function(result) {
-                    // Do something with the result
-                    $form.html("success! ;)")
-                },
-                fail: function(result){
-                  console.log("api fail");
-                }
-            });
+            {% if data.item  %}
+                $.ajax({
+                    url: '{{url_for("update_item")}}',
+                    type: 'UPDATE',
+                    contentType: "application/x-www-form-urlencoded",
+                    data: data,
+                    success: function(result) {
+                        // Do something with the result
+                        $form.html("success! ;)")
+                    },
+                    fail: function(result){
+                      console.log("api fail");
+                    }
+                });
+            {% else %}
+                $.ajax({
+                    url: '{{url_for("create_item")}}',
+                    type: 'POST',
+                    contentType: "application/x-www-form-urlencoded",
+                    data: data,
+                    success: function(result) {
+                        // Do something with the result
+                        $form.html("success! ;)")
+                    },
+                    fail: function(result){
+                      console.log("api fail");
+                    }
+                });
+            {% endif %}
+
           });
 
       });
