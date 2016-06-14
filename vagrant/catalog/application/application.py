@@ -177,16 +177,25 @@ def update():
 			response = make_response(json.dumps('Not Permitted'), 401)
 			response.headers['Content-Type'] = 'application/json'
 			return response
-	if request.method == 'POST':
+	if 'id' in form_data:
 		item = db.query(Item).filter(Item.id==form_data['id']).first()
-		item.text = form_data['hash_key']
-		item.name = form_data['title']
-		item.category_id = form_data['category_id']
-		# db.add_all(item)
+		name = form_data.get('title') or item.name
+		text = form_data.get('text') or item.text
+		category_id = form_data.get('category') or item.category_id
+		item_obj = Item(
+			id=item.id, 
+			name=name, 
+			category_id=category_id, 
+			text=text, 
+			user_id=login_session['user_id']
+		)
+		newItem = db.merge(item_obj)
 		db.commit()
 		response = make_response(json.dumps('Success.'), 200)
 		response.headers['Content-Type'] = 'application/json'
 		return response
+	else:
+		return "test"
 			
 
 @app.route('/revoke')
@@ -327,14 +336,16 @@ def new_item():
 
 @app.route('/update-item/<int:ids>')
 def update_item(ids):
-	item = db.query(Item).filter(Item.id==ids).first()
+	data = db.query(Item, Categories).join(Categories).filter(Item.id==ids).first()
+	item = data.Items
+	item_cats = data.Categories
 	cats = db.query(Categories).all()
-	print item.name
 	return render_template('add_item.html', data = { 
 		"update" : 1, 
 		"login_session" : login_session, 
 		"categories" : cats, 
-		"item" : item
+		"item" : item,
+		"item_cats" : item_cats
 	})
 
 # temporary TODO: REMOVEs
