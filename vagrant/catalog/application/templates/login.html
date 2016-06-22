@@ -12,18 +12,21 @@
       <a href="/User/delete">Delete User</a>
       <a href="/new-item">Create Item</a>
     {% else %}
-      <h1>Please Login to Use the System</h1>
-      {{ data.login_session.email }}
-      <div id="signInButton">
-        <span class="g-signin"
-          data-scope="openid email"
-          data-clientid="1086125913606-te1dj092q4n1bo11odjenhrsp0docme6.apps.googleusercontent.com"
-          data-redirecturi="postmessage"
-          data-accesstype="offline"
-          data-cookiepolicy="single_host_origin"
-          data-callback="signInCallback"
-          data-approvalprompt="force">
-        </span>
+      <div class="banner">
+        <div class="banner-row">
+          <div class="text">Please Sign in to Use the System</div>
+            <div id="signInButton">
+              <span class="g-signin"
+                data-scope="openid email"
+                data-clientid="1086125913606-te1dj092q4n1bo11odjenhrsp0docme6.apps.googleusercontent.com"
+                data-redirecturi="postmessage"
+                data-accesstype="offline"
+                data-cookiepolicy="single_host_origin"
+                data-callback="signInCallback"
+                data-approvalprompt="force">
+              </span>
+            </div>
+        </div>
       </div>
     {% endif %}
     <script>

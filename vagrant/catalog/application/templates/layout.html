@@ -3,20 +3,34 @@
 <head>
     {% block head_tag %}
         <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/foundation/6.2.3/foundation-flex.css">
+        <link rel="stylesheet" type="text/css" href="/static/css/site.css">
+        <link href='https://fonts.googleapis.com/css?family=Raleway:500,700' rel='stylesheet' type='text/css'>
+        <link href='https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css' rel='stylesheet' type='text/css'>
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/foundation/6.2.3/foundation.min.js"></script>
         <title>{% block title %}{% endblock %} - My Webpage</title>
     {% endblock %}
 </head>
 <body>
+
+    <div class="header">
+        <a href="{{url_for('home')}}" class="logo">
+            <div class="icon-row">
+                <i class="fa fa-home" aria-hidden="true"></i>
+            </div>
+            <div class="text">Awesome Blog</div>
+        </a>
+    </div>
     <div id="content">
         {% block content %}{% endblock %}
     </div>
     <a href="{{url_for('read_item')}}">All</a>
-    <div id="footer">
-        {% block footer %}
-            FOOTER
-        {% endblock %}
+    <div class="footer" id="footer">
+        <div class="row">
+            {% block footer %}
+                <span class="copy">&copy; 1900 Awesome Blog™</span>
+            {% endblock %}
+        </div>
     </div>
 </body>
 </html>
