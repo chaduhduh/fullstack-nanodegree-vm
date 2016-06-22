@@ -181,12 +181,20 @@ def user_delete():
 	return redirect(url_for('home'))
 
 
-@app.route('/Item/delete/<name>')
-def Delete(name):
-	item = db.query(Item).filter_by(name=name).first()
-	db.delete(item)
-	db.commit()
-	return "deleted"
+@app.route('/Item/delete/<id>')
+def Delete(id):
+	json_data = { 'success' : False, 'data' : []}
+	item = db.query(Item).filter_by(id=id).first()
+	if not item or not item.user_id or login_session['user_id'] != item.user_id:
+		response = make_response(json.dumps({ 'success' : False }), 401)
+		response.headers['Content-Type'] = 'application/json'
+		return response
+	else:
+		db.delete(item)
+		db.commit()
+		response = make_response(json.dumps({ 'success' : True }), 200)
+		response.headers['Content-Type'] = 'application/json'
+		return response
 
 
 @app.route('/Item/', methods=['GET'])
@@ -225,25 +233,32 @@ def update_item():
 			response = make_response(json.dumps('Not Permitted'), 401)
 			response.headers['Content-Type'] = 'application/json'
 			return response
-	if 'id' in form_data:
-		item = db.query(Item).filter(Item.id==form_data['id']).first()
-		name = form_data.get('title') or item.name
-		text = form_data.get('text') or item.text
-		category_id = form_data.get('category') or item.category_id
-		item_obj = Item(
-			id=item.id, 
-			name=name, 
-			category_id=category_id, 
-			text=text.rstrip(), 
-			user_id=login_session['user_id']
-		)
-		newItem = db.merge(item_obj)
-		db.commit()
-		response = make_response(json.dumps('Success.'), 200)
+	if 'id' not in form_data:
+		response = make_response(json.dumps('Something went wrong'), 400)
 		response.headers['Content-Type'] = 'application/json'
 		return response
 	else:
-		return "test"
+		item = db.query(Item).filter(Item.id==form_data['id']).first()
+		if item.user_id == login_session['user_id']:
+			name = form_data.get('title') or item.name
+			text = form_data.get('text') or item.text
+			category_id = form_data.get('category') or item.category_id
+			item_obj = Item(
+				id=item.id, 
+				name=name, 
+				category_id=category_id, 
+				text=text.rstrip(), 
+				user_id=login_session['user_id']
+			)
+			newItem = db.merge(item_obj)
+			db.commit()
+			response = make_response(json.dumps('Success.'), 200)
+			response.headers['Content-Type'] = 'application/json'
+			return response
+		else:
+			response = make_response(json.dumps('Not Permitted'), 401)
+			response.headers['Content-Type'] = 'application/json'
+			return response
 
 
 @app.route('/Item/read/<int:id>')
@@ -304,7 +319,6 @@ def Categories_with_items():
 	if data:
 		json_data['success'] = True
 		for result in data:
-			print vars(result)
 			cat = {'name' : result.name, 'id' : result.id, 'items' : [] } 
 			cats_items = db.query(Item).filter(Item.category_id==result.id).all()
 			for item in cats_items:
@@ -314,18 +328,6 @@ def Categories_with_items():
 					'text' : item.text
 				})
 			json_data['data'].append(cat)
-		# for result in data:
-		# 	# print vars(result)
-		# 	print result.Items.category_id
-		# 	if result.Categories:
-		# 		cat = result.Categories
-		# 		item = { 'name' : cat.name, 'id' : cat.id, 'items' : [] }
-		# 	# 	item = { 'name' : cat.name, 'id' : cat.id, 'items' : [] }
-		# 	# if result.Items:
-		# 	# 	db_item = result.Items
-		# 	# 	item['items'].append({ 'name' : db_item.name, 'id' : db_item.id, 'text' : db_item.text})
-		# 	if item:
-		# 		json_data['data'].append(item)
 	response = make_response(json.dumps(json_data), 200)
 	response.headers['Content-Type'] = 'application/json'
 	return response
@@ -339,17 +341,22 @@ def new_item():
 
 @app.route('/update-item/<int:ids>')
 def update_item_page(ids):
+	item = False
 	data = db.query(Item, Categories).join(Categories).filter(Item.id==ids).first()
-	item = data.Items
-	item_cats = data.Categories
-	cats = db.query(Categories).all()
-	return render_template('add_item.html', data = { 
-		"update" : 1, 
-		"login_session" : login_session, 
-		"categories" : cats, 
-		"item" : item,
-		"item_cats" : item_cats
-	})
+	if data:
+		item = data.Items
+	if not item or item.user_id != login_session['user_id']:
+		return redirect(url_for('home'))
+	else:
+		item_cats = data.Categories
+		cats = db.query(Categories).all()
+		return render_template('add_item.html', data = { 
+			"update" : 1, 
+			"login_session" : login_session, 
+			"categories" : cats, 
+			"item" : item,
+			"item_cats" : item_cats
+		})
 
 # temporary TODO: REMOVEs
 @app.route('/clear-db')
