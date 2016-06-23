@@ -32,7 +32,19 @@ def home():
 		hash_key = ''.join(random.choice(string.ascii_uppercase + string.digits)
 			for x in xrange(32))
 		login_session['hash_key'] = hash_key
-	return render_template('login.html', data = { "login_session" : login_session })
+	data = db.query(Item, Categories).join(Categories).all()
+	items = []
+	if data:
+		for result in data:
+			if result.Items:
+				db_item = result.Items
+				item = { 'name' : db_item.name, 'id' : db_item.id, 'text' : db_item.text, 'categories' : [] }
+			if result.Categories:
+				cat = result.Categories
+				item['categories'].append({ 'name' : cat.name, 'id' : cat.id })
+			if item:
+				items.append(item)
+	return render_template('login.html', data = { "login_session" : login_session, "list" : items })
 
 
 @app.route('/login')
@@ -185,7 +197,7 @@ def user_delete():
 def Delete(id):
 	json_data = { 'success' : False, 'data' : []}
 	item = db.query(Item).filter_by(id=id).first()
-	if not item or not item.user_id or login_session['user_id'] != item.user_id:
+	if not item or 'user_id' not in login_session or not item.user_id or login_session['user_id'] != item.user_id:
 		response = make_response(json.dumps({ 'success' : False }), 401)
 		response.headers['Content-Type'] = 'application/json'
 		return response
@@ -333,10 +345,29 @@ def Categories_with_items():
 	return response
 
 
+# layouts
+
 @app.route('/new-item')
 def new_item():
 	cats = db.query(Categories).all()
 	return render_template('add_item.html', data = { "login_session" : login_session, "categories" : cats})
+
+
+@app.route('/item/<int:id>')
+def layout_item(id):
+	item = {}
+	db_data = db.query(Item, Categories).join(Categories).filter(Item.id==id).first()
+	if db_data:
+		item['id'] = db_data.Items.id
+		item['name'] = db_data.Items.name
+		item['text'] = db_data.Items.text
+		item['cats'] = []
+		if(db_data.Categories):
+			item['cats'].append({
+				'id' : db_data.Categories.id,
+				'name' : db_data.Categories.name
+			})
+	return render_template('item.html', data = { "login_session" : login_session, "item" : item })
 
 
 @app.route('/update-item/<int:ids>')
@@ -345,7 +376,7 @@ def update_item_page(ids):
 	data = db.query(Item, Categories).join(Categories).filter(Item.id==ids).first()
 	if data:
 		item = data.Items
-	if not item or item.user_id != login_session['user_id']:
+	if not item or 'user_id' not in login_session or item.user_id != login_session['user_id']:
 		return redirect(url_for('home'))
 	else:
 		item_cats = data.Categories
