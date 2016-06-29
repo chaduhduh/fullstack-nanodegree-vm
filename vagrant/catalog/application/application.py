@@ -1,9 +1,9 @@
 # imports
+
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session as login_session, make_response, flash
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from database_setup import Base, Items as Item, Users as User, Categories as Categories
-
 from oauth2client.client import flow_from_clientsecrets
 from oauth2client.client import FlowExchangeError
 import httplib2
@@ -12,57 +12,33 @@ import requests
 import random
 import string
 
+
 # setup
+
 app = Flask(__name__)
 app.config.from_object(__name__)
 app.secret_key = '\x11\xa4W[\xfc\xba\x1df-\xe5OrW\xc1\xc3\xd8>r\xc1\xbciV\xfbp'
 engine = create_engine('sqlite:///catalog.db')
 Base.metadata.bind = engine
-# Base.metadata.drop_all()
 DBSession = sessionmaker(bind=engine)
 db = DBSession()
 CLIENT_ID = json.loads(
     open('client_secret.json', 'r').read())['web']['client_id']
 session_keys = ["user_id", "access_token", "name", "gplus_id", "username", "email", "picture"]
 
-# routes
-@app.route('/')
-def home():
-	if 'hash_key' not in login_session:
-		hash_key = ''.join(random.choice(string.ascii_uppercase + string.digits)
-			for x in xrange(32))
-		login_session['hash_key'] = hash_key
-	data = db.query(Item, Categories).join(Categories).all()
-	items = []
-	if data:
-		for result in data:
-			if result.Items:
-				db_item = result.Items
-				item = { 'name' : db_item.name, 'id' : db_item.id, 'text' : db_item.text, 'categories' : [] }
-			if result.Categories:
-				cat = result.Categories
-				item['categories'].append({ 'name' : cat.name, 'id' : cat.id })
-			if item:
-				items.append(item)
-	return render_template('login.html', data = { "login_session" : login_session, "list" : items })
 
+# Auth routes
+
+@app.route('/logout')
+def logout():
+	return redirect(url_for('gdisconnect'))
 
 @app.route('/login')
 def login():
     hash_key = ''.join(random.choice(string.ascii_uppercase + string.digits)
                     for x in xrange(32))
     login_session['hash_key'] = hash_key
-    return render_template('login.html', data = { "login_session" : login_session })
-
-
-@app.route('/logout')
-def logout():
-	return redirect(url_for('gdisconnect'))
-
-@app.route('/user/email')
-def user_email():
-	data = login_session['email']
-	return data
+    return render_template('home.html', data = { "login_session" : login_session })
 
 @app.route('/connect-googleplus/', methods=['POST'])
 def connect_googleplus():
@@ -181,7 +157,15 @@ def gdisconnect():
 @app.route('/revoke')
 def revoke():
 	revoke_session()
-	return redirect(url_for('home'))
+	return redirect(url_for('layout_home'))
+
+
+# API Routes
+
+@app.route('/user/email')
+def user_email():
+	data = login_session['email']
+	return data
 
 
 @app.route('/User/delete')
@@ -190,7 +174,7 @@ def user_delete():
 	db.delete(user)
 	db.commit()
 	revoke_session()
-	return redirect(url_for('home'))
+	return redirect(url_for('layout_home'))
 
 
 @app.route('/Item/delete/<id>')
@@ -229,7 +213,7 @@ def create_item():
 		response.headers['Content-Type'] = 'application/json'
 		return response
 	else:
-		response = make_response(json.dumps('Something went wrong'), 502)
+		response = make_response(json.dumps('Something went wrong'), 400)
 		response.headers['Content-Type'] = 'application/json'
 		return response
 
@@ -245,10 +229,6 @@ def update_item():
 			response = make_response(json.dumps('Not Permitted'), 401)
 			response.headers['Content-Type'] = 'application/json'
 			return response
-	if 'id' not in form_data:
-		response = make_response(json.dumps('Something went wrong'), 400)
-		response.headers['Content-Type'] = 'application/json'
-		return response
 	else:
 		item = db.query(Item).filter(Item.id==form_data['id']).first()
 		if item.user_id == login_session['user_id']:
@@ -345,10 +325,59 @@ def Categories_with_items():
 	return response
 
 
-# layouts
+# layout routes
+
+@app.route('/')
+def layout_home():
+	items = []
+	if 'hash_key' not in login_session:
+		hash_key = ''.join(random.choice(string.ascii_uppercase + string.digits)
+			for x in xrange(32))
+		login_session['hash_key'] = hash_key
+	data = db.query(Item, Categories).join(Categories).all()
+	cats = db.query(Categories).all()
+	if data:
+		for result in data:
+			if result.Items:
+				db_item = result.Items
+				item = { 'name' : db_item.name, 'id' : db_item.id, 'text' : db_item.text, 'categories' : [] }
+			if result.Categories:
+				cat = result.Categories
+				item['categories'].append({ 'name' : cat.name, 'id' : cat.id })
+			if item:
+				items.append(item)
+	return render_template('home.html', data = { "login_session" : login_session, "list" : items, "cats" : cats })
+
+
+@app.route('/category/<int:id>')
+def layout_category(id):
+	items = []
+	cat_name = ""
+	if 'hash_key' not in login_session:
+		hash_key = ''.join(random.choice(string.ascii_uppercase + string.digits)
+			for x in xrange(32))
+		login_session['hash_key'] = hash_key
+	data = db.query(Item, Categories).filter(Item.category_id==id).join(Categories).all()
+	cats = db.query(Categories).all()
+	selected_cat = db.query(Categories).filter_by(id=id).first()
+	if data:
+		for result in data:
+			if result.Items:
+				db_item = result.Items
+				item = { 'name' : db_item.name, 'id' : db_item.id, 'text' : db_item.text, 'categories' : [] }
+			if result.Categories:
+				cat = result.Categories
+				item['categories'].append({ 'name' : cat.name, 'id' : cat.id })
+				cat_name = item['categories'][0]['name'];
+			if item:
+				items.append(item)
+	return render_template('home.html', data = { "login_session" : login_session, "list" : items, "cats" : cats, "selected_cat" : selected_cat })
+
 
 @app.route('/new-item')
-def new_item():
+def layout_new_item():
+	if 'user_id' not in login_session:
+		return redirect(url_for('layout_home'))
 	cats = db.query(Categories).all()
 	return render_template('add_item.html', data = { "login_session" : login_session, "categories" : cats})
 
@@ -357,6 +386,7 @@ def new_item():
 def layout_item(id):
 	item = {}
 	db_data = db.query(Item, Categories).join(Categories).filter(Item.id==id).first()
+	cats = db.query(Categories).all()
 	if db_data:
 		item['id'] = db_data.Items.id
 		item['name'] = db_data.Items.name
@@ -367,7 +397,7 @@ def layout_item(id):
 				'id' : db_data.Categories.id,
 				'name' : db_data.Categories.name
 			})
-	return render_template('item.html', data = { "login_session" : login_session, "item" : item })
+	return render_template('item.html', data = { "login_session" : login_session, "item" : item, "cats" : cats })
 
 
 @app.route('/update-item/<int:ids>')
@@ -377,7 +407,7 @@ def update_item_page(ids):
 	if data:
 		item = data.Items
 	if not item or 'user_id' not in login_session or item.user_id != login_session['user_id']:
-		return redirect(url_for('home'))
+		return redirect(url_for('layout_home'))
 	else:
 		item_cats = data.Categories
 		cats = db.query(Categories).all()
@@ -389,11 +419,13 @@ def update_item_page(ids):
 			"item_cats" : item_cats
 		})
 
+
 # temporary TODO: REMOVEs
 @app.route('/clear-db')
 def db_clear():
 	Base.metadata.drop_all()
 	return "cleared"
+
 
 # functions
 
@@ -432,6 +464,7 @@ def delete_user(args):
 		db.delete(user)
 		db.commit()
 	return user
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

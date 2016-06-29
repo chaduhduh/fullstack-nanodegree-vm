@@ -6,98 +6,52 @@
 {% endblock %}
 {% block content %}
     <div id="result"></div>
-    {% if data.login_session.access_token %}
-      <h1>{{ data.login_session.email }} is logged in</h1>
-      <a href="/logout">Logout</a>
-      <a href="/User/delete">Delete User</a>
-      <a href="/new-item">Create Item</a>
-    {% else %}
-      <div class="banner">
-        <div class="banner-row">
-          <div class="text">Please Sign in to Use the System</div>
-            <div id="signInButton">
-              <span class="g-signin"
-                data-scope="openid email"
-                data-clientid="1086125913606-te1dj092q4n1bo11odjenhrsp0docme6.apps.googleusercontent.com"
-                data-redirecturi="postmessage"
-                data-accesstype="offline"
-                data-cookiepolicy="single_host_origin"
-                data-callback="signInCallback"
-                data-approvalprompt="force">
-              </span>
-            </div>
-        </div>
-      </div>
-    {% endif %}
-
     <div class="row">
       <div class="columns medium-8">
 		<div class="items">
-			Single Post
-			<br />
-			<h1>
-				{{ data.item.name }}
-			</h1>
-			<p>
-				{{ data.item.text }}
-			</p>
-			<br />
-	        {% if data.item.cats %}
-	        	<div class="cats">
-		        	Catss
-		            {% for category in data.item.cats %}
-	              		{{ category.id }}
-	                    {{ category.name }}
-	                    <br />
-		            {% endfor %}
-	           	</div>
-	        {% endif %}
-	        <div class="links">
-	        	<a href="/update-item/{{ data.item.id }}" class="edit">Edit</a>
-	        	<a href="/Item/delete/{{ data.item.id }}" class="delete" delete-link>delete</a>
-	        </div>
+			{% if data.item.name %}
+
+				<div class="item">
+                    <h1> 
+                    	{{ data.item.name }}
+                    </h1>
+                    <p class="text">
+                      {{ data.item.text }}
+                    </p>
+                    <div class="item-cats">
+                      {% if data.item.cats %}
+				        	<div class="item-cats">
+					        	<b>categories:</b>
+					            {% for category in data.item.cats %}
+				                     <a href="/category/{{ category.id }}">
+		                                {{ category.name }}
+		                              </a>
+					            {% endfor %}
+				           	</div>
+				        {% endif %}
+                    </div>
+                    <div class="options">
+                    	<b>Options:</b>
+                    	<a href="/update-item/{{ data.item.id }}" class="edit">Edit</a>
+						<a href="/Item/delete/{{ data.item.id }}" class="delete" delete-link>delete</a>
+                    </div>
+                </div>
+		    {% else %}
+		    	<div class="not-found">
+		    		Hmm, this item cannot be found.
+		    	</div>
+		    {% endif %}
       	</div>
       </div>
       <div class="columns medium-4">
-        
+        <div class="cats">
+            <h3>Categories</h3>
+            {% for cat in data.cats %}
+              <a href="/category/{{ cat.id }}">
+                {{ cat.name }}
+              </a>
+            {% endfor %}
+          </div>
       </div>
     </div>
-
-    <script>
-      function signInCallback(authResult) {
-        if (authResult['code']) {
-          // Hide the sign-in button now that the user is authorized
-          $('#signinButton').attr('style', 'display: none');
-
-          $.ajax({
-            type: 'POST',
-            url: '{{url_for("connect_googleplus")}}?hash_key={{data.login_session.hash_key}}',
-            processData: false,
-            data: authResult['code'],
-            contentType: 'application/octet-stream; charset=utf-8',
-            success: function(result){
-              // $('#result').html('Login Successful!</br>'+ result + '</br>Redirecting...')
-                window.location.href = "{{url_for('home')}}";
-            }
-          });
-        } else if (authResult['error']) {
-            console.log('There was an error: ' + authResult['error']);
-        } else {
-            $('#result').html('Failed to make a server-side call. \
-                                  Check your configuration and console.');
-        }
-      }
-
-      $("[delete-link]").on("click", $(this), function(e){
-      		e.preventDefault();
-      		
-      		if(confirm("Are you sure you want to delete this? This cannot be undone.")){
-      			$.get($(this).attr("href"), {}, function(){
-					window.location.href = "/";
-      			}).fail(function(){
-      				alert("unable to delete try again later");
-      			});
-      		}
-      });
-    </script>
 {% endblock %}
