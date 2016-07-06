@@ -30,11 +30,15 @@
 				           	</div>
 				        {% endif %}
                     </div>
-                    <div class="options">
-                    	<b>Options:</b>
-                    	<a href="/update-item/{{ data.item.id }}" class="edit">Edit</a>
-						<a href="/Item/delete/{{ data.item.id }}" class="delete" delete-link>delete</a>
-                    </div>
+                    {% if data.item.user_id %}
+	                    {% if data.login_session.user_id == data.item.user_id %}
+		                    <div class="options">
+		                    	<b>Options:</b>
+		                    	<a href="/update-item/{{ data.item.id }}" class="edit">Edit</a>
+								<a href="/Item/delete/{{ data.item.id }}" class="delete" delete-link>delete</a>
+		                    </div>
+		                {% endif %}
+		            {% endif %}
                 </div>
 		    {% else %}
 		    	<div class="not-found">

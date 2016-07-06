@@ -9,7 +9,15 @@
     <div class="row">
       <div class="columns medium-8 small-12">
           <div class="post-items">
-            <h1>{% if data.selected_cat %}'{{ data.selected_cat.name }}' - {% endif %}Posts</h1>
+            <h1>
+              {% if data.selected_cat %}
+                '{{ data.selected_cat.name }}' - Posts 
+              {% elif data.username %} 
+                Posts by: {{ data.username }} 
+              {% else %}
+                All - Posts
+              {% endif %}
+            </h1>
             {% if data.list|length > 0 %}
               {% for item in data.list %}
                 <div class="item">

@@ -84,12 +84,12 @@
                     success: function(result) {
                         $form.html(
                           '<div class="loading">' +
-                            'Success!! redirecting ..<i class="fa-spin fa fa-spinner loading"></i>'+
+                            'Success!! loading ..<i class="fa-spin fa fa-spinner loading"></i>'+
                           '</div>'
                         )
                         setTimeout(function(){
                             window.location.href = '/item/' + id;
-                        }, 2000);
+                        }, 1000);
                     }
                 });
             {% else %}
@@ -101,12 +101,12 @@
                     success: function(result) {
                         $form.html(
                           '<div class="loading">' +
-                            'Success!! redirecting<br /><i class="fa-spin fa fa-spinner loading"></i>'+
+                            'Success!! loading ..<br /><i class="fa-spin fa fa-spinner loading"></i>'+
                           '</div>'
                         )
                         setTimeout(function(){
                             window.location.href = "{{url_for('layout_home')}}";
-                        }, 2000);
+                        }, 1000);
                     }
                 });
             {% endif %}

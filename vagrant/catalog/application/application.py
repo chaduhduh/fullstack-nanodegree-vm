@@ -338,7 +338,7 @@ def layout_home():
 	cats = db.query(Categories).all()
 	if data:
 		for result in data:
-			if result.Items:
+			if result.Items:	
 				db_item = result.Items
 				item = { 'name' : db_item.name, 'id' : db_item.id, 'text' : db_item.text, 'categories' : [] }
 			if result.Categories:
@@ -353,10 +353,6 @@ def layout_home():
 def layout_category(id):
 	items = []
 	cat_name = ""
-	if 'hash_key' not in login_session:
-		hash_key = ''.join(random.choice(string.ascii_uppercase + string.digits)
-			for x in xrange(32))
-		login_session['hash_key'] = hash_key
 	data = db.query(Item, Categories).filter(Item.category_id==id).join(Categories).all()
 	cats = db.query(Categories).all()
 	selected_cat = db.query(Categories).filter_by(id=id).first()
@@ -372,6 +368,28 @@ def layout_category(id):
 			if item:
 				items.append(item)
 	return render_template('home.html', data = { "login_session" : login_session, "list" : items, "cats" : cats, "selected_cat" : selected_cat })
+
+
+@app.route('/user/<int:id>')
+def layout_user_items(id):
+	items = []
+	name = ""
+	cats = db.query(Categories).all()
+	user = db.query(User).filter(User.id==id).first()
+	if user:
+		name = user.email;
+		data = db.query(Item, Categories).join(Categories).filter(Item.user_id==id).all()
+		if data:
+			for result in data:
+				if result.Items:
+					db_item = result.Items
+					item = { 'name' : db_item.name, 'id' : db_item.id, 'text' : db_item.text, 'categories' : [] }
+				if result.Categories:
+					cat = result.Categories
+					item['categories'].append({ 'name' : cat.name, 'id' : cat.id })
+				if item:
+					items.append(item)
+	return render_template('home.html', data = { "login_session" : login_session, "list" : items, "cats" : cats, "username" : name })
 
 
 @app.route('/new-item')
@@ -391,6 +409,7 @@ def layout_item(id):
 		item['id'] = db_data.Items.id
 		item['name'] = db_data.Items.name
 		item['text'] = db_data.Items.text
+		item['user_id'] = db_data.Items.user_id
 		item['cats'] = []
 		if(db_data.Categories):
 			item['cats'].append({
