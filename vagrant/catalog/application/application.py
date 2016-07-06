@@ -1,9 +1,15 @@
 # imports
 
-from flask import Flask, render_template, request, redirect, url_for, jsonify, session as login_session, make_response, flash
+from flask import Flask, \
+	render_template, request, redirect, \
+	url_for, jsonify, session as login_session, \
+	make_response, flash
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from database_setup import Base, Items as Item, Users as User, Categories as Categories
+from database_setup import Base, \
+ 	Items as Item, \
+ 	Users as User, \
+ 	Categories as Categories
 from oauth2client.client import flow_from_clientsecrets
 from oauth2client.client import FlowExchangeError
 import httplib2
@@ -24,7 +30,8 @@ DBSession = sessionmaker(bind=engine)
 db = DBSession()
 CLIENT_ID = json.loads(
     open('client_secret.json', 'r').read())['web']['client_id']
-session_keys = ["user_id", "access_token", "name", "gplus_id", "username", "email", "picture"]
+session_keys = ["user_id", "access_token", "name", 
+					"gplus_id", "username", "email", "picture"]
 
 
 # Auth routes
@@ -106,9 +113,6 @@ def connect_googleplus():
 	login_session['image'] = data['picture']
 	login_session['email'] = data['email']
 
-	# test delete user first
-	# deleted_user = delete_user({'email' : login_session['email']})
-
 	# Create user only if we do not already have the same email
 	user = db.query(User).filter_by(email=login_session['email']).first()
 	if user is None:
@@ -171,7 +175,8 @@ def user_email():
 @app.route('/User/delete')
 def user_delete():
 	user = db.query(User).filter_by(email=login_session['email']).first()
-	db.delete(user)
+	user.active = 0;
+	new_user = db.merge(user)
 	db.commit()
 	revoke_session()
 	return redirect(url_for('layout_home'))
@@ -181,7 +186,8 @@ def user_delete():
 def Delete(id):
 	json_data = { 'success' : False, 'data' : []}
 	item = db.query(Item).filter_by(id=id).first()
-	if not item or 'user_id' not in login_session or not item.user_id or login_session['user_id'] != item.user_id:
+	if not item or 'user_id' not in login_session \
+	   		or not item.user_id or login_session['user_id'] != item.user_id:
 		response = make_response(json.dumps({ 'success' : False }), 401)
 		response.headers['Content-Type'] = 'application/json'
 		return response
@@ -206,7 +212,12 @@ def create_item():
 		response.headers['Content-Type'] = 'application/json'
 		return response
 	if form_data['title']:
-		item = Item(name=form_data['title'],user_id=login_session['user_id'],text=form_data['text'].rstrip() or "", category_id=form_data['category'] or None)
+		item = Item( 
+				name = form_data['title'],
+			 	user_id = login_session['user_id'],
+			 	text = form_data['text'].rstrip() or "", 
+			 	category_id = form_data['category'] or None
+			)
 		db.add(item)
 		db.commit()
 		response = make_response(json.dumps('Success.'), 200)
@@ -236,12 +247,12 @@ def update_item():
 			text = form_data.get('text') or item.text
 			category_id = form_data.get('category') or item.category_id
 			item_obj = Item(
-				id=item.id, 
-				name=name, 
-				category_id=category_id, 
-				text=text.rstrip(), 
-				user_id=login_session['user_id']
-			)
+					id=item.id, 
+					name=name, 
+					category_id=category_id, 
+					text=text.rstrip(), 
+					user_id=login_session['user_id']
+				)
 			newItem = db.merge(item_obj)
 			db.commit()
 			response = make_response(json.dumps('Success.'), 200)
@@ -265,7 +276,7 @@ def Read(id):
 			json_data['cats'].append({
 				'id' : data.Categories.id,
 				'name' : data.Categories.name
-			})
+				})
 	response = make_response(json.dumps(json_data), 200)
 	response.headers['Content-Type'] = 'application/json'
 	return response
@@ -280,7 +291,12 @@ def Read_all():
 		for result in data:
 			if result.Items:
 				db_item = result.Items
-				item = { 'name' : db_item.name, 'id' : db_item.id, 'text' : db_item.text, 'categories' : [] }
+				item = { 
+					'name' : db_item.name, 
+					'id' : db_item.id, 
+					'text' : db_item.text, 
+					'categories' : [] 
+				}
 			if result.Categories:
 				cat = result.Categories
 				item['categories'].append({ 'name' : cat.name, 'id' : cat.id })
@@ -298,7 +314,10 @@ def Categories_read():
 	if data:
 		json_data['success'] = True
 		for result in data:
-			json_data['data'].append({ 'name' : result.name, 'id' : result.id }) 
+			json_data['data'].append({ 
+				'name' : result.name, 
+				'id' : result.id 
+				}) 
 	response = make_response(json.dumps(json_data), 200)
 	response.headers['Content-Type'] = 'application/json'
 	return response
@@ -340,13 +359,22 @@ def layout_home():
 		for result in data:
 			if result.Items:	
 				db_item = result.Items
-				item = { 'name' : db_item.name, 'id' : db_item.id, 'text' : db_item.text, 'categories' : [] }
+				item = { 
+					'name' : db_item.name, 
+					'id' : db_item.id, 
+					'text' : db_item.text, 
+					'categories' : [] 
+				}
 			if result.Categories:
 				cat = result.Categories
 				item['categories'].append({ 'name' : cat.name, 'id' : cat.id })
 			if item:
 				items.append(item)
-	return render_template('home.html', data = { "login_session" : login_session, "list" : items, "cats" : cats })
+	return render_template('home.html', data = { 
+				"login_session" : login_session, 
+				"list" : items, 
+				"cats" : cats 
+			})
 
 
 @app.route('/category/<int:id>')
@@ -360,14 +388,24 @@ def layout_category(id):
 		for result in data:
 			if result.Items:
 				db_item = result.Items
-				item = { 'name' : db_item.name, 'id' : db_item.id, 'text' : db_item.text, 'categories' : [] }
+				item = { 
+					'name' : db_item.name, 
+					'id' : db_item.id, 
+					'text' : db_item.text, 
+					'categories' : [] 
+				}
 			if result.Categories:
 				cat = result.Categories
 				item['categories'].append({ 'name' : cat.name, 'id' : cat.id })
 				cat_name = item['categories'][0]['name'];
 			if item:
 				items.append(item)
-	return render_template('home.html', data = { "login_session" : login_session, "list" : items, "cats" : cats, "selected_cat" : selected_cat })
+	return render_template('home.html', data = { 
+				"login_session" : login_session, 
+				"list" : items, 
+				"cats" : cats, 
+				"selected_cat" : selected_cat 
+			})
 
 
 @app.route('/user/<int:id>')
@@ -383,13 +421,23 @@ def layout_user_items(id):
 			for result in data:
 				if result.Items:
 					db_item = result.Items
-					item = { 'name' : db_item.name, 'id' : db_item.id, 'text' : db_item.text, 'categories' : [] }
+					item = { 
+						'name' : db_item.name, 
+						'id' : db_item.id, 
+						'text' : db_item.text, 
+						'categories' : [] 
+					}
 				if result.Categories:
 					cat = result.Categories
 					item['categories'].append({ 'name' : cat.name, 'id' : cat.id })
 				if item:
 					items.append(item)
-	return render_template('home.html', data = { "login_session" : login_session, "list" : items, "cats" : cats, "username" : name })
+	return render_template('home.html', data = { 
+				"login_session" : login_session, 
+				"list" : items, 
+				"cats" : cats, 
+				"username" : name 
+			})
 
 
 @app.route('/new-item')
@@ -397,7 +445,10 @@ def layout_new_item():
 	if 'user_id' not in login_session:
 		return redirect(url_for('layout_home'))
 	cats = db.query(Categories).all()
-	return render_template('add_item.html', data = { "login_session" : login_session, "categories" : cats})
+	return render_template('add_item.html', data = { 
+				"login_session" : login_session, 
+				"categories" : cats
+			})
 
 
 @app.route('/item/<int:id>')
@@ -416,7 +467,11 @@ def layout_item(id):
 				'id' : db_data.Categories.id,
 				'name' : db_data.Categories.name
 			})
-	return render_template('item.html', data = { "login_session" : login_session, "item" : item, "cats" : cats })
+	return render_template('item.html', data = { 
+				"login_session" : login_session, 
+				"item" : item, 
+				"cats" : cats 
+			})
 
 
 @app.route('/update-item/<int:ids>')
@@ -425,7 +480,8 @@ def update_item_page(ids):
 	data = db.query(Item, Categories).join(Categories).filter(Item.id==ids).first()
 	if data:
 		item = data.Items
-	if not item or 'user_id' not in login_session or item.user_id != login_session['user_id']:
+	if not item or 'user_id' not in login_session \
+				or item.user_id != login_session['user_id']:
 		return redirect(url_for('layout_home'))
 	else:
 		item_cats = data.Categories
@@ -463,7 +519,7 @@ def create_user(args):
 		return False
 	user_session = args['login_session']
 	user = User(name=user_session['name'], image=user_session['image'], 
-		email=user_session['email'])
+		email=user_session['email'], active=1)
 	db.add(user)
 	db.commit()
 	added_user = db.query(User).filter_by(email=user_session['email']).one()
@@ -478,12 +534,14 @@ def delete_user(args):
 		key = 'user_id'
 		value = args['user_id']
 	if key and value:
-		# user = db.query(User).filter(User['email'] == value)
 		user = db.query(User).filter_by(email=value).first()
-		db.delete(user)
+		user.active = 0;
+		new_user = db.merge(user)
 		db.commit()
 	return user
 
+
+# flask start
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

@@ -14,6 +14,7 @@ class Users(Base):
     name = Column(String(250), nullable=False)
     email = Column(String(250), nullable=False)
     image = Column(String(250))
+    active = Column(Integer)
 
 
 class Items(Base):
