@@ -26,6 +26,5 @@ to any platform that can make http requests.
 http://localhost:5000/Item/ - GET /{ model }/  <br />
 http://localhost:5000/Item/1 - GET /{ model }/{ id }  <br />
 http://localhost:5000/Category/ - GET /{ model }/  <br />
-http://localhost:5000/Category/1 - GET /{ model }/{ id }  <br />
-http://localhost:5000/Categories/Items/ - GET /{ model }/{ model } <br />
+http://localhost:5000/Category/Item/ - GET /{ model }/{ model } <br />
 

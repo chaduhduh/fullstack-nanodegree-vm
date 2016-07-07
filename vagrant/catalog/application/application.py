@@ -271,7 +271,7 @@ def Categories_read():
 	return response
 
 
-@app.route('/Categories/Items/')
+@app.route('/Category/Item/')
 def Categories_with_items():
 	json_data = { 'success' : False, 'data' : []}
 	data = db.query(Categories).all()
@@ -290,6 +290,7 @@ def Categories_with_items():
 	response = make_response(json.dumps(json_data), 200)
 	response.headers['Content-Type'] = 'application/json'
 	return response
+
 
 @app.route('/User/delete')
 def user_delete():
