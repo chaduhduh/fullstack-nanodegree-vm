@@ -28,5 +28,24 @@ Tournament code creates a database with players and thier matches. tournament.py
 11. To run the python test file simply type "python tournament_test.py" (given you are still in the /vagrant/tournament directory)<br />
 12. If done properly test should display "Success!  All tests pass!"<br />
 
+Catalog Code
+===============
+
+
+This catalog utilizes the Flask framework to provide the basis for any list type web application. The demonstration 
+provided is setup as blog in which users can add posts and tag them with the appropriate category. This could really 
+be used for any list type of application, such as: tutorials, products, reviews etc.<br /><br />
+![Alt text](application/static/images/preview.jpg?raw=true "Preview")<br />
+<br />
+
+<b>To Run:</b><br />
+1. Go through environment setup steps if necessary<br />
+3. Navigate to the vagrant folder inside of the cloned repo at /fullstack-nanodegree-vm/vagrant<br />
+4. Run "Vagrant Up" to boot VM and run "vagrant ssh" to connect to the VM<br />
+6. Once inside the VM navigate to the catalog code directory "cd /vagrant/catalog"<br />
+7. Navigate to the application directory "cd application"<br />
+8. We can start our flask application by running the file named application.py - "python application.py"<br />
+9. We can now view this application at http://localhost:5000
+
 
 
