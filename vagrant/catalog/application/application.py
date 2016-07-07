@@ -255,7 +255,7 @@ def Read(id):
 	return response
 
 
-@app.route('/Categories/')
+@app.route('/Category/')
 def Categories_read():
 	json_data = { 'success' : False, 'data' : []}
 	data = db.query(Categories).all()
