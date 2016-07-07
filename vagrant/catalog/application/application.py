@@ -133,24 +133,7 @@ def gdisconnect():
 		return response
 
 
-# API Routes
-
-@app.route('/user/email')
-def user_email():
-	data = login_session['email']
-	return data
-
-
-@app.route('/User/delete')
-def user_delete():
-	user = db.query(User).filter_by(email=login_session['email']).first()
-	user.active = 0;
-	new_user = db.merge(user)
-	db.commit()
-	result = revoke_googleplus(2)
-	revoke_session()
-	return redirect(url_for('layout_home'))
-
+# API Routes  ( these are not used in this app but will allow for additional platform layouts )
 
 @app.route('/Item/delete/<id>')
 def Delete(id):
@@ -171,7 +154,27 @@ def Delete(id):
 
 @app.route('/Item/', methods=['GET'])
 def read_item():
-	return Read_all()
+	json_data = { 'success' : False, 'data' : []}
+	data = db.query(Item, Categories).join(Categories).all()
+	if data:
+		json_data['success'] = True
+		for result in data:
+			if result.Items:
+				db_item = result.Items
+				item = { 
+					'name' : db_item.name, 
+					'id' : db_item.id, 
+					'text' : db_item.text, 
+					'categories' : [] 
+				}
+			if result.Categories:
+				cat = result.Categories
+				item['categories'].append({ 'name' : cat.name, 'id' : cat.id })
+			if item:
+				json_data['data'].append(item)
+	response = make_response(json.dumps(json_data), 200)
+	response.headers['Content-Type'] = 'application/json'
+	return response
 
 
 @app.route('/Item/', methods=['POST'])
@@ -234,7 +237,7 @@ def update_item():
 			return response
 
 
-@app.route('/Item/read/<int:id>')
+@app.route('/Item/<int:id>', methods=['GET'])
 def Read(id):
 	json_data = { 'success' : False, 'data' : []}
 	data = db.query(Item, Categories).join(Categories).filter(Item.id==id).first()
@@ -252,32 +255,7 @@ def Read(id):
 	return response
 
 
-@app.route('/Item/read/')
-def Read_all():
-	json_data = { 'success' : False, 'data' : []}
-	data = db.query(Item, Categories).join(Categories).all()
-	if data:
-		json_data['success'] = True
-		for result in data:
-			if result.Items:
-				db_item = result.Items
-				item = { 
-					'name' : db_item.name, 
-					'id' : db_item.id, 
-					'text' : db_item.text, 
-					'categories' : [] 
-				}
-			if result.Categories:
-				cat = result.Categories
-				item['categories'].append({ 'name' : cat.name, 'id' : cat.id })
-			if item:
-				json_data['data'].append(item)
-	response = make_response(json.dumps(json_data), 200)
-	response.headers['Content-Type'] = 'application/json'
-	return response
-
-
-@app.route('/Categories/read/')
+@app.route('/Categories/')
 def Categories_read():
 	json_data = { 'success' : False, 'data' : []}
 	data = db.query(Categories).all()
@@ -293,7 +271,7 @@ def Categories_read():
 	return response
 
 
-@app.route('/Categories/read/Items/')
+@app.route('/Categories/Items/')
 def Categories_with_items():
 	json_data = { 'success' : False, 'data' : []}
 	data = db.query(Categories).all()
@@ -312,6 +290,16 @@ def Categories_with_items():
 	response = make_response(json.dumps(json_data), 200)
 	response.headers['Content-Type'] = 'application/json'
 	return response
+
+@app.route('/User/delete')
+def user_delete():
+	user = db.query(User).filter_by(email=login_session['email']).first()
+	user.active = 0;
+	new_user = db.merge(user)
+	db.commit()
+	result = revoke_googleplus(2)
+	revoke_session()
+	return redirect(url_for('layout_home'))
 
 
 # layout routes
@@ -445,7 +433,7 @@ def layout_item(id):
 
 
 @app.route('/update-item/<int:ids>')
-def update_item_page(ids):
+def layout_update_item(ids):
 	item = False
 	data = db.query(Item, Categories).join(Categories).filter(Item.id==ids).first()
 	if data:
@@ -463,13 +451,6 @@ def update_item_page(ids):
 			"item" : item,
 			"item_cats" : item_cats
 		})
-
-
-# temporary TODO: REMOVEs
-@app.route('/clear-db')
-def db_clear():
-	Base.metadata.drop_all()
-	return "cleared"
 
 
 # functions

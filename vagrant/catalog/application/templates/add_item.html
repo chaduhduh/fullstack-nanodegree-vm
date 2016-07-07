@@ -59,19 +59,19 @@
         <h1>Please Login to Use the System</h1>
     {% endif %}
     <script>
-      $( document ).ready(function() {
-          var $page = $("#content");
-          var $form = $page.find("[data-add-form]");
+        $( document ).ready(function() {
+            var $page = $("#content");
+            var $form = $page.find("[data-add-form]");
 
-          $form.on("submit", $(this), function(e){
+            $form.on("submit", $(this), function(e){
             e.preventDefault();
             var data = $(this).serialize();
             var $self = $(this);
             var id = $self.find('input[name="id"]').attr("value");
 
             if($self.find('input[name="title"]').val().length <= 0){
-              alert("There is an error in your entry. Plese try again.");
-              return;
+                alert("There is an error in your entry. Plese try again.");
+                return;
             }
 
             {% if data.item  %}
@@ -91,27 +91,25 @@
                         }, 1000);
                     }
                 });
-            {% else %}
-                $.ajax({
-                    url: '{{url_for("create_item")}}',
-                    type: 'POST',
-                    contentType: "application/x-www-form-urlencoded",
-                    data: data,
-                    success: function(result) {
-                        $form.html(
-                          '<div class="loading">' +
-                            'Success!! loading ..<br /><i class="fa-spin fa fa-spinner loading"></i>'+
-                          '</div>'
-                        )
-                        setTimeout(function(){
-                            window.location.href = "{{url_for('layout_home')}}";
-                        }, 1000);
-                    }
-                });
-            {% endif %}
-
-          });
-
-      });
+                {% else %}
+                    $.ajax({
+                        url: '{{url_for("create_item")}}',
+                        type: 'POST',
+                        contentType: "application/x-www-form-urlencoded",
+                        data: data,
+                        success: function(result) {
+                            $form.html(
+                              '<div class="loading">' +
+                                'Success!! loading ..<br /><i class="fa-spin fa fa-spinner loading"></i>'+
+                              '</div>'
+                            )
+                            setTimeout(function(){
+                                window.location.href = "{{url_for('layout_home')}}";
+                            }, 1000);
+                        }
+                    });
+                {% endif %}
+            });
+        });
     </script>
 {% endblock %}
