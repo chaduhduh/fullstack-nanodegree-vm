@@ -7,54 +7,54 @@
 {% block content %}
     <div id="result"></div>
     <div class="row">
-      <div class="columns medium-8 small-12">
-          <div class="post-items">
-            <h1>
-              {% if data.selected_cat %}
-                '{{ data.selected_cat.name }}' - Posts 
-              {% elif data.username %} 
-                Posts by: {{ data.username }} 
-              {% else %}
-                All - Posts
-              {% endif %}
-            </h1>
-            {% if data.list|length > 0 %}
-              {% for item in data.list %}
-                <div class="item">
-                   <a class="title" href="/item/{{ item.id }}">
-                      {{ item.name }}
-                    </a>
-                    <p class="text">
-                      {{ item.text }}
-                    </p>
-                    <div class="item-cats">
-                      {% if item.categories %}
-                          <b>categories:</b>&nbsp;
-                          {% for category in item.categories %}
-                              <a href="/category/{{ category.id }}">
-                                {{ category.name }}
-                              </a>
-                          {% endfor %}
-                      {% endif %}
+        <div class="columns medium-8 small-12">
+            <div class="post-items">
+                <h1>
+                    {% if data.selected_cat %}
+                        '{{ data.selected_cat.name }}' - Posts
+                        {% elif data.username %}
+                        Posts by: {{ data.username }}
+                    {% else %}
+                        All - Posts
+                    {% endif %}
+                </h1>
+                {% if data.list|length > 0 %}
+                    {% for item in data.list %}
+                        <div class="item">
+                            <a class="title" href="/item/{{ item.id }}">
+                                {{ item.name }}
+                            </a>
+                            <p class="text">
+                                {{ item.text }}
+                            </p>
+                            <div class="item-cats">
+                                {% if item.categories %}
+                                    <b>categories:</b>&nbsp;
+                                    {% for category in item.categories %}
+                                        <a href="/category/{{ category.id }}">
+                                            {{ category.name }}
+                                        </a>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="no-posts">
+                        No Posts Found
                     </div>
-                </div>
-              {% endfor %}
-            {% else %}
-              <div class="no-posts">
-                No Posts Found
-              </div>
-            {% endif %}
-          </div>
-      </div>
-      <div class="columns medium-4 small-12">
-          <div class="cats">
-            <h3>Categories</h3>
-            {% for cat in data.cats %}
-              <a href="/category/{{ cat.id }}">
-                {{ cat.name }}
-              </a>
-            {% endfor %}
-          </div>
-      </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="columns medium-4 small-12">
+            <div class="cats">
+                <h3>Categories</h3>
+                {% for cat in data.cats %}
+                    <a href="/category/{{ cat.id }}">
+                        {{ cat.name }}
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
     </div>
 {% endblock %}

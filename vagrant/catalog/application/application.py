@@ -43,7 +43,7 @@ def logout():
 @app.route('/login')
 def login():
     hash_key = ''.join(random.choice(string.ascii_uppercase + string.digits)
-                    for x in xrange(32))
+                	for x in xrange(32))
     login_session['hash_key'] = hash_key
     return render_template('home.html', data = { "login_session" : login_session })
 
@@ -53,72 +53,58 @@ def connect_googleplus():
 		response = make_response(json.dumps('Not Permitted'), 401)
 		response.headers['Content-Type'] = 'application/json'
 		return response
-	code = request.data
+	# authorization code to credentials object
+
 	try:
-	    # Upgrade the authorization code into a credentials object
 	    oauth_flow = flow_from_clientsecrets('client_secret.json', scope='')
 	    oauth_flow.redirect_uri = 'postmessage'
-	    credentials = oauth_flow.step2_exchange(code)
+	    credentials = oauth_flow.step2_exchange(request.data)
 	except FlowExchangeError:
 	    response = make_response(
 	        json.dumps('Failed to upgrade the authorization code.'), 401)
 	    response.headers['Content-Type'] = 'application/json'
 	    return response
-
-	# make sure its a valid token
+	# validate token with google from credentials object
+	
 	access_token = credentials.access_token
 	url = ('https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=%s'% access_token)
 	http = httplib2.Http()
 	result = json.loads(http.request(url, 'GET')[1])
-	# If there was an error in the access token info, abort.
 	if result.get('error') is not None:
 		response = make_response(json.dumps(result.get('error')), 500)
 		response.headers['Content-Type'] = 'application/json'
+	# validate token for this user
 
-	# Verify that the access token is used for the intended user.
 	gplus_id = credentials.id_token['sub']
 	if result['user_id'] != gplus_id:
 		response = make_response(
 			json.dumps("Token's user ID doesn't match given user ID."), 401)
 		response.headers['Content-Type'] = 'application/json'
 		return response
+    # validate token for this specific app
 
-    # Verify that the access token is valid for this app.
 	if result['issued_to'] != CLIENT_ID:
 		response = make_response(
 			json.dumps("Token's client ID does not match app's."), 401)
 		print "Token's client ID does not match app's."
 		response.headers['Content-Type'] = 'application/json'
 		return response
+	# check to see if this user is already logged in
 
-	stored_credentials = login_session.get('credentials')
-	stored_gplus_id = login_session.get('gplus_id')
-	if stored_credentials is not None and gplus_id == stored_gplus_id:
-		response = make_response(json.dumps('Current user is already connected.'), 
-			200)
-		response.headers['Content-Type'] = 'application/json'
-		return response
-
-	# Store the access token in the session for later use.
-	login_session['access_token'] = credentials.access_token
-	login_session['gplus_id'] = gplus_id
-
-	# Get user info
 	userinfo_url = "https://www.googleapis.com/oauth2/v1/userinfo"
 	params = {'access_token': credentials.access_token, 'alt': 'json'}
-	answer = requests.get(userinfo_url, params=params)
-
-	data = answer.json()
-	login_session['name'] = data['name']
-	login_session['image'] = data['picture']
-	login_session['email'] = data['email']
-
+	user_info = requests.get(userinfo_url, params=params).json()
+	login_session['access_token'] = credentials.access_token
+	login_session['gplus_id'] = gplus_id
+	login_session['name'] = user_info['name']
+	login_session['image'] = user_info['picture']
+	login_session['email'] = user_info['email']
 	# Create user only if we do not already have the same email
+
 	user = db.query(User).filter_by(email=login_session['email']).first()
 	if user is None:
 		user_created = create_user({'login_session' : login_session})
 		login_session['user_id'] = user_created.id
-		print "user created " + user_created.email
 		if user_created is False:
 			response = make_response(json.dumps('Failed to create User.'), 
 				500)
@@ -126,9 +112,6 @@ def connect_googleplus():
 			return response
 	else:
 		login_session['user_id'] = user.id
-		print "user already exists " + user.email
-
-	# Prepares the function response given nothing above failed
 	final_response = make_response(json.dumps("success"), 200)
 	return final_response
 
@@ -139,29 +122,15 @@ def gdisconnect():
 		response = make_response(json.dumps('Current user not connected.'), 401)
 		response.headers['Content-Type'] = 'application/json'
 		return response
-	http = httplib2.Http()
-	result = http.request('https://accounts.google.com/o/oauth2/revoke?token=%s' 
-    	% login_session['access_token'], 'GET')[0]
-	if result['status'] == '200':
-		session_cleared = revoke_session()
-		if(session_cleared):
-			response = make_response(json.dumps('Successfully disconnected.'), 200)
-			response.headers['Content-Type'] = 'application/json'
-			return response
-		else:
-			response = make_response(json.dumps('Something went wrong. User name not found', 400))
-			response.headers['Content-Type'] = 'application/json'
-			return response
-	else:
-		response = make_response(json.dumps('Failed to revoke token for given user.', 400))
+	session_cleared = revoke_session()
+	if(session_cleared):
+		response = make_response(json.dumps('Successfully disconnected.'), 200)
 		response.headers['Content-Type'] = 'application/json'
 		return response
-			
-
-@app.route('/revoke')
-def revoke():
-	revoke_session()
-	return redirect(url_for('layout_home'))
+	else:
+		response = make_response(json.dumps('Something went wrong. User name not found', 400))
+		response.headers['Content-Type'] = 'application/json'
+		return response
 
 
 # API Routes
@@ -178,6 +147,7 @@ def user_delete():
 	user.active = 0;
 	new_user = db.merge(user)
 	db.commit()
+	result = revoke_googleplus(2)
 	revoke_session()
 	return redirect(url_for('layout_home'))
 
@@ -512,6 +482,17 @@ def revoke_session():
 		return False
 	else:
 		return True
+
+
+def revoke_googleplus(max_attempts=3):
+	i = 0
+	while i < max_attempts:
+		http = httplib2.Http()
+		result = http.request('https://accounts.google.com/o/oauth2/revoke?token=%s' 
+		   	% login_session['access_token'], 'GET')[0]
+		if result['status'] == '200':
+			return 1
+	return 0
 
 
 def create_user(args):
