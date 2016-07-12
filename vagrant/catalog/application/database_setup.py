@@ -7,6 +7,7 @@ from sqlalchemy import create_engine
 
 Base = declarative_base()
 
+
 class Users(Base):
     __tablename__ = 'users'
 
@@ -43,10 +44,10 @@ engine.execute("""
 	DELETE FROM Categories where 1 = 1;
 """)
 engine.execute("""
-	INSERT INTO Categories (name) values 
-		("Music"),
-		("Sports"),
-		("Entertainment"),
-		("Dining"),
-		("Funny")
+    INSERT INTO Categories (name) values
+        ("Music"),
+        ("Sports"),
+        ("Entertainment"),
+        ("Dining"),
+        ("Funny")
 """)
