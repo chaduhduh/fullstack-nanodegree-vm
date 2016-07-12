@@ -102,21 +102,11 @@ def connect_googleplus():
     login_session['name'] = user_info['name']
     login_session['image'] = user_info['picture']
     login_session['email'] = user_info['email']
-    # Create user only if we do not already have the same email
-
-    user = db.query(User).filter_by(email=login_session['email']).first()
-    if user is None:
-        user_created = create_user({'login_session': login_session})
-        login_session['user_id'] = user_created.id
-        if user_created is False:
-            response = make_response(json.dumps('Failed to create User.'),
-                                     500)
-            response.headers['Content-Type'] = 'application/json'
-            return response
-    else:
-        login_session['user_id'] = user.id
-        final_response = make_response(json.dumps("success"), 200)
-    return final_response
+    # Create user only if not present, user logged in at this point
+    
+    user_created = create_user({'login_session': login_session})
+    login_session['user_id'] = user_created.id
+    return make_response(json.dumps("success"), 200)
 
 
 @app.route('/gdisconnect')
@@ -312,10 +302,7 @@ def Categories_with_items():
 
 @app.route('/User/delete')
 def user_delete():
-    user = db.query(User).filter_by(email=login_session['email']).first()
-    user.active = 0
-    new_user = db.merge(user)
-    db.commit()
+    deleted_user = delete_user({"email" : login_session['email']});
     result = revoke_googleplus(2)
     revoke_session()
     return redirect(url_for('layout_home'))
@@ -506,6 +493,15 @@ def layout_update_item(ids):
 # functions
 
 def revoke_session():
+    """ Called to clear any current sessions stored in the application.
+
+        Takes 0 arguments however this requires value session_keys to 
+        be set to the keys that represent your session.
+        
+        session_keys : ["user_id", ...]
+    """
+
+
     for key in session_keys:
         if key in login_session:
             del login_session[key]
@@ -516,6 +512,21 @@ def revoke_session():
 
 
 def revoke_googleplus(max_attempts=3):
+    """ Revokes Oauth2 token from google apis 
+        
+        Attempts to ping google's api to revoke the token
+        stored in login_session. This will try "max_attempts"
+        number of times before returning result. Typically 
+        "max_attempts" will be set at 1. In some cases you may 
+        need to increase this. User can revoke their own 
+        permissions through their google back end.
+
+        Args:
+        max_attempts: integer value that indicates the maximum 
+            number of requests made to the api. 
+    """
+
+
     i = 0
     while i < max_attempts:
         http = httplib2.Http()
@@ -523,13 +534,39 @@ def revoke_googleplus(max_attempts=3):
             /revoke?token=%s' % login_session['access_token'], 'GET')[0]
         if result['status'] == '200':
             return 1
+        i+=1;
     return 0
 
 
 def create_user(args):
+    """ Creates a user using the given parameters.
+
+        Converts a login_session value into a new user.
+        Note: this function assumes that we do not want
+        to overwrite an existing user. 
+
+        Args:
+        email: validated email of user
+        name: validated username of user
+        image: validated image url of user. Note: this 
+            simply points to the image. Upload handled
+            elsewhere. (if applicable)
+
+        Return Types:
+        Success: Indicates user added or found, returns tuple 
+            of the added/found user
+        Fail: returns False. 
+    """
+
+
     if 'login_session' not in args:
         return False
     user_session = args['login_session']
+    user_found = db.query(User).filter_by(email=user_session['email']).first()
+    if user_found:
+        return user_found
+    # user not found so so create
+
     user = User(name=user_session['name'], image=user_session['image'],
                 email=user_session['email'], active=1)
     db.add(user)
@@ -539,18 +576,31 @@ def create_user(args):
 
 
 def delete_user(args):
+    """ Deletes user based on the given parameters.
+        
+        Deletes the user with the specified email. Note:
+        application never deletes user records, instead
+        we flag user as inactive so that accounts can be
+        re opened.
+
+        Args:
+        email: email of user to delete
+
+        Return Types:
+        Success: Returns deleted user
+        Fail: returns False if something goes wrong. 
+    """
+
+
     if 'email' in args:
-        key = 'email'
-        value = args['email']
-    elif 'user_id' in args:
-        key = 'user_id'
-        value = args['user_id']
-    if key and value:
-        user = db.query(User).filter_by(email=value).first()
+        user = db.query(User).filter_by(email=args['email']).first()
         user.active = 0
         new_user = db.merge(user)
         db.commit()
-    return user
+    if user:
+        return user
+    else:
+        return False
 
 
 # flask start

@@ -6,7 +6,7 @@
 import psycopg2
 
 def executeQuery(args):
-    """ Excutes a given query on a given DB and returns result 
+    """ Executes a given query on a given DB and returns result 
 
         This abstracts the actual execution of the queries. This way
         any other lib or database type could be used without needing to
