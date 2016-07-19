@@ -131,6 +131,8 @@ def gdisconnect():
                                  401)
         response.headers['Content-Type'] = 'application/json'
         return response
+    # user connected perform disconnect or return error
+
     session_cleared = revoke_session()
     if(session_cleared):
         response = make_response(json.dumps('Successfully disconnected.'),
@@ -164,10 +166,14 @@ def Delete(id):
     item = db.query(Item).filter_by(id=id).first()
     if not item or 'user_id' not in login_session \
        or not item.user_id or login_session['user_id'] != item.user_id:
+        # item not found or user not authorized to delete
+
         response = make_response(json.dumps({'success': False}), 401)
         response.headers['Content-Type'] = 'application/json'
         return response
     else:
+        # item found, user authorized, delete it
+
         db.delete(item)
         db.commit()
         response = make_response(json.dumps({'success': True}), 200)
@@ -193,6 +199,8 @@ def read_item():
 
     json_data['success'] = True
     for result in data:
+        # map the data of each item and add to our data array
+
         db_item = result.Items
         item = {
             'name': db_item.name,
@@ -226,16 +234,23 @@ def create_item():
 
     form_data = request.values
     if form_data['hash_key'] != login_session['hash_key']:
+        # form csrf didnt match session or isnt there
+
         response = make_response(json.dumps('Not Permitted'), 401)
         response.headers['Content-Type'] = 'application/json'
         return response
+
     if form_data['title']:
+        # if we have required fields create Item object with our data
+
         item = Item(
             name=form_data['title'],
             user_id=login_session['user_id'],
             text=form_data['text'].rstrip() or "",
             category_id=form_data['category'] or None
         )
+        # save Item to db
+
         db.add(item)
         db.commit()
         response = make_response(json.dumps('Success.'), 200)
@@ -265,23 +280,31 @@ def update_item():
 
     form_data = request.values
     if form_data['hash_key'] != login_session['hash_key']:
+        # form csrf didnt match session or isnt there
+
         response = make_response(json.dumps('Not Permitted'), 401)
         response.headers['Content-Type'] = 'application/json'
         return response
     if 'id' not in form_data:
+        # id of item to update wasnt found
+
         response = make_response(json.dumps('Something went wrong'), 400)
         response.headers['Content-Type'] = 'application/json'
         return response
     item = db.query(Item).filter(Item.id == form_data['id']).first()
     if item.user_id != login_session['user_id']:
+        # user is not authorized to edit this item
+
         response = make_response(json.dumps('Not Permitted'), 401)
         response.headers['Content-Type'] = 'application/json'
         return response
-    # user authorized
+    # user authorized, csrf valid
 
     name = form_data.get('title') or item.name
     text = form_data.get('text') or item.text
     category_id = form_data.get('category') or item.category_id
+    # create item object with our id and merged form data
+
     item_obj = Item(
         id=item.id,
         name=name,
@@ -289,6 +312,9 @@ def update_item():
         text=text.rstrip(),
         user_id=login_session['user_id']
         )
+
+    # update item (merge)
+
     newItem = db.merge(item_obj)
     db.commit()
     response = make_response(json.dumps('Success.'), 200)
@@ -310,6 +336,8 @@ def Read(id):
     data = db.query(Item, Categories)\
         .join(Categories).filter(Item.id == id).first()
     if data:
+        # data was found for this id, prep then return it
+
         json_data['id'] = data.Items.id
         json_data['name'] = data.Items.name
         json_data['cats'] = []
@@ -333,6 +361,8 @@ def Categories_read():
     json_data = {'success': False, 'data': []}
     data = db.query(Categories).all()
     if data:
+        # catgegory data was found, prep then return it
+
         json_data['success'] = True
         for result in data:
             json_data['data'].append({
@@ -358,13 +388,17 @@ def Categories_with_items():
         response = make_response(json.dumps(json_data), 200)
         response.headers['Content-Type'] = 'application/json'
         return response
-    # has data
+    # data was found
 
     json_data['success'] = True
     for result in data:
+        # query items for each category
+
         cat = {'name': result.name, 'id': result.id, 'items': []}
         cats_items = db.query(Item).filter(Item.category_id == result.id).all()
         for item in cats_items:
+            # add data to our response
+
             cat['items'].append({
                 'id': item.id,
                 'name': item.name,
@@ -387,7 +421,7 @@ def user_delete():
     """
 
     deleted_user = delete_user({"email": login_session['email']})
-    result = revoke_googleplus(2)
+    result = revoke_googleplus(2)   # how many attempts to revoke
     revoke_session()
     return redirect(url_for('layout_home'))
 
@@ -405,6 +439,8 @@ def layout_home():
 
     items = []
     if 'hash_key' not in login_session:
+        # generate a hash if we dont already have one
+
         hash_key = ''.join(random.choice(
             string.ascii_uppercase + string.digits) for x in xrange(32))
         login_session['hash_key'] = hash_key
@@ -414,9 +450,11 @@ def layout_home():
         return render_template('home.html', data={
                     "login_session": login_session
                 })
-    # has data
+    # data was found, prepare it for template use
 
     for result in data:
+        # map the data of each item and add to our data array
+
         db_item = result.Items
         item = {
             'name': db_item.name,
@@ -450,19 +488,25 @@ def layout_category(id):
 
     items = []
     cat_name = ""
+    # get our data
+
     data = db.query(Item, Categories).filter(Item.category_id == id)\
         .join(Categories).all()
     cats = db.query(Categories).all()
     selected_cat = db.query(Categories).filter_by(id=id).first()
+    # render empty if none
+
     if not data or not data[0].Items:
         return render_template('home.html', data={
                     "login_session": login_session,
                     "cats": cats,
                     "selected_cat": selected_cat
                 })
-    # has data
+    # has data, prepare it for template use
 
     for result in data:
+        # map the data of each item and add to our data array
+
         db_item = result.Items
         item = {
             "name": db_item.name,
@@ -503,7 +547,7 @@ def layout_user_items(id):
     user = db.query(User).filter(User.id == id).first()
     if not user:
         return redirect(url_for('layout_home'))
-    # has user
+    # user was found for the given id, grab their data or render empty
 
     name = user.email
     data = db.query(Item, Categories).join(Categories)\
@@ -518,6 +562,8 @@ def layout_user_items(id):
     # data found for user
 
     for result in data:
+        # map the data of each item and add to our data array
+
         db_item = result.Items
         item = {
             "name": db_item.name,
@@ -550,6 +596,8 @@ def layout_new_item():
 
     if 'user_id' not in login_session:
         return redirect(url_for('layout_home'))
+    # fill template with cats
+
     cats = db.query(Categories).all()
     return render_template('add_item.html', data={
                 "login_session": login_session,
@@ -570,6 +618,8 @@ def layout_item(id):
     """
 
     item = {}
+    # get data from db or render empty
+
     db_data = db.query(Item, Categories).join(Categories)\
         .filter(Item.id == id).first()
     cats = db.query(Categories).all()
@@ -579,7 +629,7 @@ def layout_item(id):
                 "item": item,
                 "cats": cats
             })
-    # has data
+    # has data, map data for our reponse and return it
 
     item['id'] = db_data.Items.id
     item['name'] = db_data.Items.name
@@ -600,7 +650,21 @@ def layout_item(id):
 
 @app.route('/update-item/<int:ids>')
 def layout_update_item(ids):
+    """ Layout Route: layout_update_item
+
+        Renders update item form for the selected item
+        given the user is authorized to edit. Only content
+        owners can edit.
+
+        Args:
+          id: item id for the post we want to update
+
+        Uses Template: add_item.html
+    """
+
     item = False
+    # get data and authorize user otherwise redirect
+
     data = db.query(Item, Categories).join(Categories)\
         .filter(Item.id == ids).first()
     if data:
@@ -608,7 +672,7 @@ def layout_update_item(ids):
     if not item or 'user_id' not in login_session \
             or item.user_id != login_session['user_id']:
         return redirect(url_for('layout_home'))
-    # item found and user authorized
+    # item found and user authorized return template
 
     item_cats = data.Categories
     cats = db.query(Categories).all()
@@ -657,11 +721,15 @@ def revoke_googleplus(max_attempts=3):
     """
 
     i = 0
+    # ping api for until success or limit reached
+
     while i < max_attempts:
         http = httplib2.Http()
         result = http.request('https://accounts.google.com/o/oauth2\
             /revoke?token=%s' % login_session['access_token'], 'GET')[0]
         if result['status'] == '200':
+            # success we can just reurn response now
+
             return 1
         i += 1
     return 0
@@ -689,11 +757,13 @@ def create_user(args):
 
     if 'login_session' not in args:
         return False
+    # check for existing user, if found return it
+
     user_session = args['login_session']
     user_found = db.query(User).filter_by(email=user_session['email']).first()
     if user_found:
         return user_found
-    # user not found so so create
+    # user not found so so create new one and return it
 
     user = User(name=user_session['name'], image=user_session['image'],
                 email=user_session['email'], active=1)
@@ -721,6 +791,8 @@ def delete_user(args):
 
     if 'email' in args:
         user = db.query(User).filter_by(email=args['email']).first()
+        # we dont want to delete our record entirely just set to inactive
+
         user.active = 0
         new_user = db.merge(user)
         db.commit()
