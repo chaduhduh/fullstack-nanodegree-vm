@@ -163,6 +163,8 @@ def Delete(id):
     """
 
     json_data = {'success': False, 'data': []}
+    # get item and check for authorization
+
     item = db.query(Item).filter_by(id=id).first()
     if not item or 'user_id' not in login_session \
        or not item.user_id or login_session['user_id'] != item.user_id:
@@ -190,6 +192,8 @@ def read_item():
     """
 
     json_data = {'success': False, 'data': []}
+    # get data or return empty
+
     data = db.query(Item, Categories).join(Categories).all()
     if not data or not data[0].Items:
         response = make_response(json.dumps(json_data), 200)
