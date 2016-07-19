@@ -38,19 +38,28 @@ session_keys = ["user_id", "access_token", "name",
 
 @app.route('/logout')
 def logout():
+    """ Auth Route: logout - GET /logout
+
+        Performs the necessary steps to end users session. If additional
+        authentication services are used that logic will be contained here.
+    """
+
     return redirect(url_for('gdisconnect'))
-
-
-@app.route('/login')
-def login():
-    hash_key = ''.join(random.choice(string.ascii_uppercase + string.digits)
-                       for x in xrange(32))
-    login_session['hash_key'] = hash_key
-    return render_template('home.html', data={"login_session": login_session})
 
 
 @app.route('/connect-googleplus/', methods=['POST'])
 def connect_googleplus():
+    """ Auth Route: connect_googleplus - POST /connect-googleplus
+
+        Route to handle authentication using google's oauth2 api.
+        This accepts POST http method. Returns 200 on completed
+        authentication. Returns another appropriate error code on
+        for any errors encountered.
+
+        Post Parameters:
+        code: Response code from google oauth2 api
+    """
+
     if request.args.get('hash_key') != login_session['hash_key']:
         response = make_response(json.dumps('Not Permitted'), 401)
         response.headers['Content-Type'] = 'application/json'
@@ -92,7 +101,7 @@ def connect_googleplus():
         print "Token's client ID does not match app's."
         response.headers['Content-Type'] = 'application/json'
         return response
-    # check to see if this user is already logged in
+    # user is valid at this point, grab and store data in session
 
     userinfo_url = "https://www.googleapis.com/oauth2/v1/userinfo"
     params = {'access_token': credentials.access_token, 'alt': 'json'}
@@ -102,8 +111,8 @@ def connect_googleplus():
     login_session['name'] = user_info['name']
     login_session['image'] = user_info['picture']
     login_session['email'] = user_info['email']
-    # Create user only if not present, user logged in at this point
-    
+    # Create user with our login session only if not present
+
     user_created = create_user({'login_session': login_session})
     login_session['user_id'] = user_created.id
     return make_response(json.dumps("success"), 200)
@@ -111,6 +120,12 @@ def connect_googleplus():
 
 @app.route('/gdisconnect')
 def gdisconnect():
+    """ Auth Route: gdisconnect - GET /gdisconnect
+
+        Logs out a user who is logged in using google oauth2
+        authentication.
+    """
+
     if 'access_token' not in login_session:
         response = make_response(json.dumps('Current user not connected.'),
                                  401)
@@ -135,6 +150,16 @@ def gdisconnect():
 
 @app.route('/Item/delete/<id>')
 def Delete(id):
+    """ API Route: Delete - GET /Item/delete/<id>
+
+        Enpoint to perform delete on a given item. Note: user
+        must be authorized to delete for this to succeed. Returns
+        appropriate response on failure or success.
+
+        Args:
+        id: integer that represents the item to delete
+    """
+
     json_data = {'success': False, 'data': []}
     item = db.query(Item).filter_by(id=id).first()
     if not item or 'user_id' not in login_session \
@@ -152,6 +177,12 @@ def Delete(id):
 
 @app.route('/Item/', methods=['GET'])
 def read_item():
+    """ API Route: read_item - GET /Item/
+
+        Enpoint to perform general read on Items. This will return
+        all available items.
+    """
+
     json_data = {'success': False, 'data': []}
     data = db.query(Item, Categories).join(Categories).all()
     if not data or not data[0].Items:
@@ -181,6 +212,18 @@ def read_item():
 
 @app.route('/Item/', methods=['POST'])
 def create_item():
+    """ API Route: create_item - POST /Item/delete/<id>
+
+        Enpoint to create a new Item entry in the database. This accepts
+        POST http method.
+
+        Post Parameters:
+        title: name/title of item
+        text: description and/or text copy about the item
+        category: integer representing id of selected category
+        hash_key: form hash must match sessions hash
+    """
+
     form_data = request.values
     if form_data['hash_key'] != login_session['hash_key']:
         response = make_response(json.dumps('Not Permitted'), 401)
@@ -206,13 +249,27 @@ def create_item():
 
 @app.route('/Item/', methods=['UPDATE'])
 def update_item():
+    """ API Route: update_item - UPDATE /Item/
+
+        Enpoint to update an existing Item in our
+        database. This requires that id matches an existing
+        record. This will not create a new record.
+
+        Post Parameters:
+        id: integer of the item thats being updated
+        title: name/title of item
+        text: description and/or text copy about the item
+        category: integer representing id of selected category
+        hash_key: form hash must match sessions hash
+    """
+
     form_data = request.values
-    if 'id' not in form_data:
-        response = make_response(json.dumps('Something went wrong'), 400)
-        response.headers['Content-Type'] = 'application/json'
-        return response
     if form_data['hash_key'] != login_session['hash_key']:
         response = make_response(json.dumps('Not Permitted'), 401)
+        response.headers['Content-Type'] = 'application/json'
+        return response
+    if 'id' not in form_data:
+        response = make_response(json.dumps('Something went wrong'), 400)
         response.headers['Content-Type'] = 'application/json'
         return response
     item = db.query(Item).filter(Item.id == form_data['id']).first()
@@ -241,6 +298,14 @@ def update_item():
 
 @app.route('/Item/<int:id>', methods=['GET'])
 def Read(id):
+    """ API Route: Read - GET /Item/<int:id>
+
+        Enpoint to read a specific item from the database.
+
+        Args:
+        id: integer of the record to read
+    """
+
     json_data = {'success': False, 'data': []}
     data = db.query(Item, Categories)\
         .join(Categories).filter(Item.id == id).first()
@@ -260,6 +325,11 @@ def Read(id):
 
 @app.route('/Category/')
 def Categories_read():
+    """ API Route: Categories_read - GET /Category/
+
+        Enpoint to read all categories from the database.
+    """
+
     json_data = {'success': False, 'data': []}
     data = db.query(Categories).all()
     if data:
@@ -276,6 +346,12 @@ def Categories_read():
 
 @app.route('/Category/Item/')
 def Categories_with_items():
+    """ API Route: Categories_with_items - GET /Category/Item/
+
+        Enpoint to read all categories and the items contained in
+        that category.
+    """
+
     json_data = {'success': False, 'data': []}
     data = db.query(Categories).all()
     if not data:
@@ -302,7 +378,15 @@ def Categories_with_items():
 
 @app.route('/User/delete')
 def user_delete():
-    deleted_user = delete_user({"email" : login_session['email']});
+    """ API Route: user_delete - GET /User/delete'
+
+        Deletes the current user logged in. We use
+        delete_user function to run the removal from the DB.
+        See documention for that function for more info. We
+        also revoke active tokens here.
+    """
+
+    deleted_user = delete_user({"email": login_session['email']})
     result = revoke_googleplus(2)
     revoke_session()
     return redirect(url_for('layout_home'))
@@ -312,6 +396,13 @@ def user_delete():
 
 @app.route('/')
 def layout_home():
+    """ Layout Route: layout_home
+
+        Renders homepage with the post necessary data
+
+        Uses Template: home.html
+    """
+
     items = []
     if 'hash_key' not in login_session:
         hash_key = ''.join(random.choice(
@@ -347,6 +438,16 @@ def layout_home():
 
 @app.route('/category/<int:id>')
 def layout_category(id):
+    """ Layout Route: layout_category
+
+        Renders posts all posts for the given category id.
+
+        Args:
+          id: category id for the posts we want to see
+
+        Uses Template: home.html
+    """
+
     items = []
     cat_name = ""
     data = db.query(Item, Categories).filter(Item.category_id == id)\
@@ -385,6 +486,17 @@ def layout_category(id):
 
 @app.route('/user/<int:id>')
 def layout_user_items(id):
+    """ Layout Route: layout_user_items
+
+        Renders posts for a specific user using
+        our homepage template.
+
+        Args:
+          id: user id for the posts we want to see
+
+        Uses Template: home.html
+    """
+
     items = []
     name = ""
     cats = db.query(Categories).all()
@@ -427,6 +539,15 @@ def layout_user_items(id):
 
 @app.route('/new-item')
 def layout_new_item():
+    """ Layout Route: layout_new_item
+
+        Renders form to create a new item in the
+        database. Note: user must be logged in to
+        reach this route.
+
+        Uses Template: add_item.html
+    """
+
     if 'user_id' not in login_session:
         return redirect(url_for('layout_home'))
     cats = db.query(Categories).all()
@@ -438,6 +559,16 @@ def layout_new_item():
 
 @app.route('/item/<int:id>')
 def layout_item(id):
+    """ Layout Route: layout_item
+
+        Renders single post for the given item id.
+
+        Args:
+          id: item id for the post we want to see
+
+        Uses Template: item.html
+    """
+
     item = {}
     db_data = db.query(Item, Categories).join(Categories)\
         .filter(Item.id == id).first()
@@ -495,12 +626,11 @@ def layout_update_item(ids):
 def revoke_session():
     """ Called to clear any current sessions stored in the application.
 
-        Takes 0 arguments however this requires value session_keys to 
+        Takes 0 arguments however this requires value session_keys to
         be set to the keys that represent your session.
-        
+
         session_keys : ["user_id", ...]
     """
-
 
     for key in session_keys:
         if key in login_session:
@@ -512,20 +642,19 @@ def revoke_session():
 
 
 def revoke_googleplus(max_attempts=3):
-    """ Revokes Oauth2 token from google apis 
-        
+    """ Revokes Oauth2 token from google apis
+
         Attempts to ping google's api to revoke the token
         stored in login_session. This will try "max_attempts"
-        number of times before returning result. Typically 
-        "max_attempts" will be set at 1. In some cases you may 
-        need to increase this. User can revoke their own 
+        number of times before returning result. Typically
+        "max_attempts" will be set at 1. In some cases you may
+        need to increase this. User can revoke their own
         permissions through their google back end.
 
         Args:
-        max_attempts: integer value that indicates the maximum 
-            number of requests made to the api. 
+        max_attempts: integer value that indicates the maximum
+            number of requests made to the api.
     """
-
 
     i = 0
     while i < max_attempts:
@@ -534,7 +663,7 @@ def revoke_googleplus(max_attempts=3):
             /revoke?token=%s' % login_session['access_token'], 'GET')[0]
         if result['status'] == '200':
             return 1
-        i+=1;
+        i += 1
     return 0
 
 
@@ -543,21 +672,20 @@ def create_user(args):
 
         Converts a login_session value into a new user.
         Note: this function assumes that we do not want
-        to overwrite an existing user. 
+        to overwrite an existing user.
 
         Args:
         email: validated email of user
         name: validated username of user
-        image: validated image url of user. Note: this 
+        image: validated image url of user. Note: this
             simply points to the image. Upload handled
             elsewhere. (if applicable)
 
         Return Types:
-        Success: Indicates user added or found, returns tuple 
+        Success: Indicates user added or found, returns tuple
             of the added/found user
-        Fail: returns False. 
+        Fail: returns False.
     """
-
 
     if 'login_session' not in args:
         return False
@@ -577,7 +705,7 @@ def create_user(args):
 
 def delete_user(args):
     """ Deletes user based on the given parameters.
-        
+
         Deletes the user with the specified email. Note:
         application never deletes user records, instead
         we flag user as inactive so that accounts can be
@@ -588,9 +716,8 @@ def delete_user(args):
 
         Return Types:
         Success: Returns deleted user
-        Fail: returns False if something goes wrong. 
+        Fail: returns False if something goes wrong.
     """
-
 
     if 'email' in args:
         user = db.query(User).filter_by(email=args['email']).first()
